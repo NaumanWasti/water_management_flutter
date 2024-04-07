@@ -45,16 +45,15 @@ class _AnalyticsState extends State<Analytics> {
   void GetCounterSales(DateTime dateTime) async {
     try {
       if (!mounted) return;
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString("token");
-      Map<String, dynamic> headers = {
-        'Authorization': 'Bearer $token',
-      };
       var params = {
         "date":dateTime,
         "dayWiseLogs":true
       };
-      Response response = await dio.get('$base_url/Customer/GetCounterSales', queryParameters: params, options: Options(headers: headers));
+      Response response = await apiHelper.fetchData(
+          method: 'GET',
+          endpoint: 'Customer/GetCounterSales',
+          params: params
+      );
       if (response.statusCode == 200) {
         counterSaleCount = response.data['totalCounterSales'];
         var data = response.data['counterSaleLog'] as List;

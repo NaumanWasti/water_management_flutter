@@ -62,8 +62,6 @@ class _ProfileState extends State<Profile> {
 
   void SaveBusinessInfo(BusinessInfo businessInfo) async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString("token");
       var body = {
         "Edit":true,
         "TotalBottle":businessInfo.totalBottle,
@@ -71,11 +69,11 @@ class _ProfileState extends State<Profile> {
         "TotalEarning":businessInfo.totalEarning,
         "BusinessName":businessInfo.businessName
       };
-      Map<String, dynamic> headers = {
-        'Authorization': 'Bearer $token',
-      };
-      Response response = await dio.post('$base_url/Customer/SaveBusinessInfo',data: body,
-          options: Options(headers: headers));
+      Response response = await apiHelper.fetchData(
+          method: 'POST',
+          endpoint: 'Customer/SaveBusinessInfo',
+          body: body
+      );
       if (response.statusCode == 200) {
         showToast(" ${response.data['message']}");
       } else {

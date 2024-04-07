@@ -28,13 +28,13 @@ class ApiHelper {
       Response response;
       if (method == 'GET') {
         response = await dio.get(
-          '$base_url/$endpoint',
+          '${Globals.base_url}/$endpoint',
           queryParameters: params,
           options: options,
         );
       } else if (method == 'POST') {
         response = await dio.post(
-          '$base_url/$endpoint',
+          '${Globals.base_url}/$endpoint',
           queryParameters: params,
           data: body,
           options: options,

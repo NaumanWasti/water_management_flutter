@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:flutter/material.dart';
@@ -115,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
       Options options = Options(
         headers: headers,
       );
-      Response response = await dio.post(options : options, '$base_url/User/Login', data: body);
+      Response response = await dio.post(options : options, '${Globals.base_url}/User/Login', data: body);
 
       // Handle response
       if (response.statusCode == 200) {
