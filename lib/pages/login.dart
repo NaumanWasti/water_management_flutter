@@ -1,11 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dio/dio.dart';
 import 'package:email_validator/email_validator.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:water_managment_system/pages/main_page.dart';
-
+import 'package:fluttertoast/fluttertoast.dart';
 import '../db_model/constants.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -19,9 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Dio dio = Dio();
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  bool _obscureText =
-      true; // Track whether the password is currently obscured or not
+  bool _obscureText = true; // Track whether the password is currently obscured or not
   bool _loading = false;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
@@ -31,91 +27,109 @@ class _LoginScreenState extends State<LoginScreen> {
       appBar: AppBar(
         title: Text('Login'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextFormField(
-                controller: emailController,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your email';
-                  }
-                  if (!EmailValidator.validate(value)) {
-                    return 'Please enter a valid email';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 16),
-              TextFormField(
-                controller: passwordController,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
-                  suffixIcon: IconButton(
-                    onPressed: () {
-                      setState(() {
-                        _obscureText = !_obscureText;
-                      });
-                    },
-                    icon: Icon(
-                      _obscureText ? Icons.visibility : Icons.visibility_off,
-                    ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Center(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Image.asset(
+                    'assets/logo/water_logo.png',
+                    height: 250, // Adjust logo size
                   ),
-                ),
-                obscureText: _obscureText,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your password';
-                  }
-                  // You can add more password validation here if needed
-                  return null;
-                },
+                  TextFormField(
+                    controller: emailController,
+                    decoration: InputDecoration(
+                      labelText: 'Email',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your email';
+                      }
+                      if (!EmailValidator.validate(value)) {
+                        return 'Please enter a valid email';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 16),
+                  TextFormField(
+                    controller: passwordController,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      border: OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        onPressed: () {
+                          setState(() {
+                            _obscureText = !_obscureText;
+                          });
+                        },
+                        icon: Icon(
+                          _obscureText ? Icons.visibility : Icons.visibility_off,
+                        ),
+                      ),
+                    ),
+                    obscureText: _obscureText,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your password';
+                      }
+                      // You can add more password validation here if needed
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 32),
+                  ElevatedButton(
+                    onPressed: _loading
+                        ? null
+                        : () {
+                      if (_formKey.currentState!.validate()) {
+                        loginAsync(
+                            emailController.text, passwordController.text);
+                      }
+                    },
+                    child: _loading ? CircularProgressIndicator() : Text('Login'),
+                  ),
+                ],
               ),
-              SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    LoginAsync(
-                        emailController.text, passwordController.text);
-                  }
-                },
-                child:_loading ? CircularProgressIndicator() : Text('Login'),
-              ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  void LoginAsync(String email, String password) async {
+  void loginAsync(String email, String password) async {
     try {
       setState(() {
         _loading = true;
       });
       var body = {"email": email, "password": password};
-
-      Response response = await dio.post('$base_url/User/Login', data: body);
+      Map<String, String> headers = {
+        'authorization': basicAuth,
+      };
+      Options options = Options(
+        headers: headers,
+      );
+      Response response = await dio.post(options : options, '$base_url/User/Login', data: body);
 
       // Handle response
       if (response.statusCode == 200) {
         SharedPreferences prefs = await SharedPreferences.getInstance();
         String token = response.data['token'];
+        var id = response.data['id'];
+
         String userName = response.data['userName'];
         String role = response.data['role'];
         prefs.setString("token", token);
-        prefs.setString("userName", userName);
+        prefs.setInt("id", id);
         prefs.setString("role", role);
         showToast("Login successful");
+        FocusScope.of(context).unfocus();
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => MainPage()),
@@ -134,13 +148,13 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-// Future<void> fetchAndNavigate(String userId) async{
-//   SharedPreferences prefs = await SharedPreferences.getInstance();
-//   prefs.setString("userId", userId);
-//   // Navigate to the home screen with user data
-//   Navigator.pushReplacement(
-//     context,
-//     MaterialPageRoute(builder: (context)=>MainPage()),
-//   );
-// }
+  void showToast(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: Colors.grey,
+      textColor: Colors.white,
+    );
+  }
 }

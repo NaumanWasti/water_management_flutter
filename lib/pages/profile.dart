@@ -3,9 +3,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:water_managment_system/db_model/business_info.dart';
+import 'package:water_managment_system/pages/analytics.dart';
 import 'package:water_managment_system/pages/login.dart';
 
 import '../db_model/constants.dart';
+import '../helper/api_helper.dart';
 
 class Profile extends StatefulWidget {
   const Profile({super.key});
@@ -18,7 +20,9 @@ class _ProfileState extends State<Profile> {
   TextEditingController numberOfBottles = TextEditingController();
   TextEditingController bottleRate = TextEditingController();
   Dio dio = Dio();
-  bool _loading = false;
+  ApiHelper apiHelper = ApiHelper();
+
+  var date =  DateTime.now();
   BusinessInfo businessInfo = BusinessInfo(
     totalEarning: 0,
     edit: false,
@@ -34,38 +38,30 @@ class _ProfileState extends State<Profile> {
   }
 
   void GetBusinessInfo() async {
-    try {
-      setState(() {
-        _loading = true;
-      });
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString("token");
-      Map<String, dynamic> headers = {
-        'Authorization': 'Bearer $token',
-      };
-      Response response = await dio.get('$base_url/Customer/GetBusinessInfo',
-          options: Options(headers: headers));
-      if (response.statusCode == 200) {
-        businessInfo = BusinessInfo.fromMap(response.data);
-        numberOfBottles.text = businessInfo.totalBottle.toString();
-        bottleRate.text = businessInfo.bottleRate.toString();
-      } else {
-        showToast("Error: ${response.data['detail']}");
+    if (!mounted) return;
+      try {
+        Response response = await apiHelper.fetchData(
+          method: 'GET',
+          endpoint: 'Customer/GetBusinessInfo',
+        );
+
+        if (response.statusCode == 200) {
+          businessInfo = BusinessInfo.fromMap(response.data);
+          numberOfBottles.text = businessInfo.totalBottle.toString();
+          bottleRate.text = businessInfo.bottleRate.toString();
+          if(mounted){
+            setState(() {});
+          }        } else {
+          showToast("Error: ${response.data['detail']}");
+        }
+      } catch (e) {
+        showToast("Error fetching data: $e");
       }
-    } catch (e) {
-      showToast("Error fetching data: $e");
-    } finally {
-      setState(() {
-        _loading = false;
-      });
     }
-  }
+
 
   void SaveBusinessInfo(BusinessInfo businessInfo) async {
     try {
-      setState(() {
-        _loading = true;
-      });
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString("token");
       var body = {
@@ -89,7 +85,6 @@ class _ProfileState extends State<Profile> {
       showToast("Error fetching data: $e");
     } finally {
       setState(() {
-        _loading = false;
       });
     }
   }
@@ -165,7 +160,7 @@ class _ProfileState extends State<Profile> {
             // User Information Section
             Card(
               elevation: 4,
-              margin: EdgeInsets.only(bottom: widgetSpacing * 2),
+              margin: EdgeInsets.only(bottom: widgetSpacing * 1),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -185,6 +180,11 @@ class _ProfileState extends State<Profile> {
                     ),
                     SizedBox(height: 8),
                     Text(
+                      "Total Expense: ${businessInfo.TotalExpense}",
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
                       "Total Customer Advance: ${businessInfo.totalAdvance}",
                       style: TextStyle(fontSize: 16),
                     ),
@@ -199,23 +199,46 @@ class _ProfileState extends State<Profile> {
             ),
 
             // Sign Out Button
-            InkWell(
-              onTap: () => {
-                clearPref(),
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => LoginScreen(),
+            Row(
+              mainAxisAlignment:  MainAxisAlignment.spaceBetween,
+              children: [
+                InkWell(
+                  onTap: () => {
+                    clearPref(),
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => LoginScreen(),
+                      ),
+                    ),
+                  },
+                  child: Text(
+                    "Sign Out",
+                    style: TextStyle(
+                      decoration: TextDecoration.underline,
+                      fontSize: 18,
+                    ),
                   ),
                 ),
-              },
-              child: Text(
-                "Sign Out",
-                style: TextStyle(
-                  decoration: TextDecoration.underline,
-                  fontSize: 18,
+
+                ElevatedButton(
+                  onPressed: () {
+                    date = DateTime.now();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => Analytics(
+                          month: date.month,
+                          day: date.day,
+                          year: date.year,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Text("See Daily Analytics"), // Renamed the button
                 ),
-              ),
+
+              ],
             ),
           ],
         ),

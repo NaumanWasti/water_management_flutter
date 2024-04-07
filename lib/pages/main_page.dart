@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:water_managment_system/pages/expenses.dart';
 import 'package:water_managment_system/pages/profile.dart';
 
-import 'CounterSales.dart';
+import 'counter_sales.dart';
 import 'customers.dart';
 import 'deliveries.dart';
 
 class MainPage extends StatefulWidget {
-  const MainPage({super.key});
+  final int initialTabIndex;
 
+  const MainPage({Key? key, this.initialTabIndex = 0}) : super(key: key);
 
   @override
   State<MainPage> createState() => _MyMainPageState();
 }
 
 class _MyMainPageState extends State<MainPage> {
-  int _selectedTab = 0;
+  late int _selectedTab;
 
-  List _pages = [
+  List<Widget> _pages = [
     Center(
       child: Customers(),
     ),
@@ -29,9 +31,18 @@ class _MyMainPageState extends State<MainPage> {
     Center(
       child: Profile(),
     ),
+    Center(
+      child: ExpensePage(),
+    ),
   ];
 
-  _changeTab(int index) {
+  @override
+  void initState() {
+    super.initState();
+    _selectedTab = widget.initialTabIndex;
+  }
+
+  void _changeTab(int index) {
     setState(() {
       _selectedTab = index;
     });
@@ -40,7 +51,6 @@ class _MyMainPageState extends State<MainPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
       body: _pages[_selectedTab],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedTab,
@@ -52,6 +62,7 @@ class _MyMainPageState extends State<MainPage> {
           BottomNavigationBarItem(icon: Icon(Icons.delivery_dining), label: "Deliveries"),
           BottomNavigationBarItem(icon: Icon(Icons.countertops_outlined), label: "Counter"),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
+          BottomNavigationBarItem(icon: Icon(Icons.add_card_sharp), label: "Expense"),
         ],
       ),
     );

@@ -1,20 +1,20 @@
 import 'dart:convert';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dio/dio.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:signalr_core/signalr_core.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:water_managment_system/db_model/upcoming_delivery.dart';
-import 'package:flutter/services.dart' show canLaunch, launch;
 
 import '../db_model/complete_delivery_request.dart';
 import '../db_model/constants.dart';
 import '../db_model/customer.dart';
+import '../helper/api_helper.dart';
+import '../socket_service.dart';
 import 'customer_details.dart';
-import 'logs.dart';
+import 'customer_logs.dart';
 
 class Delieveries extends StatefulWidget {
   const Delieveries({Key? key}) : super(key: key);
@@ -26,10 +26,14 @@ class Delieveries extends StatefulWidget {
 class _DelieveriesState extends State<Delieveries>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  DateTime now = DateTime.now();
+  DateTime now = DateTime.now().toUtc();
+  Duration duration = new Duration(hours: 5);
   bool deliveryComplete = false;
   bool deliveryReject = false;
-  Dio dio = Dio();
+  int pageSize = 5;
+  int page = 1;
+  int totalDelivery = 0;
+  ApiHelper apiHelper = ApiHelper();
   late List<UpcomingDelivery> delivery = [];
   String selectedDay = 'Monday'; // Default selected day
   int selectedDayIndex = 1; // Default selected day
@@ -54,18 +58,25 @@ class _DelieveriesState extends State<Delieveries>
   @override
   void initState() {
     super.initState();
+    now = now.add(duration);
+    //_initSocket();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_handleTabSelection);
     selectedDayIndex = now.weekday;
     GetUpcomingDelivery(selectedDayIndex);
   }
 
+
+
   void _handleTabSelection() {
-    setState(() {
-      _tabController.index == 0
-          ? GetUpcomingDelivery(selectedDayIndex)
-          : GetUpcomingDelivery(8);
-    });
+    if(mounted){
+      setState(() {
+        _tabController.index == 0
+            ? GetUpcomingDelivery(selectedDayIndex)
+            : GetUpcomingDelivery(8);
+      });
+    }
+
   }
 
   Widget _buildDeliveryList(List<UpcomingDelivery> delivery) {
@@ -109,91 +120,100 @@ class _DelieveriesState extends State<Delieveries>
                           ),
                         )
                       : Container(
-                          height: height * 0.8,
+                    height: height * 0.8,
                           width: width,
-                          child: ListView.builder(
-                            itemCount: delivery.length,
-                            itemBuilder: (context, index) {
-                              var deliveryCustomer = delivery[index];
-                              deliveryComplete = deliveryCustomer.completed;
-                              deliveryReject = deliveryCustomer.rejected;
-                              print(deliveryReject);
-                              print("deliveryReject");
-                              return Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: InkWell(
-                                  onTap: () => {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => CustomerLogs(
-                                          customerId:
-                                              deliveryCustomer.customerId,
-                                          customerName: deliveryCustomer.name,
-                                        ),
-                                      ),
-                                    ),
-                                  },
-                                  child: Card(
-                                    child: ListTile(
-                                      leading: CircleAvatar(
-                                        backgroundColor: Colors.blue,
-                                        child: Text(
-                                          "${index + 1}",
-                                          style: TextStyle(color: Colors.white),
-                                        ),
-                                      ),
-                                      title: Text("${deliveryCustomer.name}"),
-                                      subtitle: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Text("Phone: ${deliveryCustomer.phone}"),
-                                              SizedBox(width: 5),
-                                              InkWell(
-                                                onTap: () {
-                                                  _launchPhoneApp(deliveryCustomer.phone);
-                                                },
-                                                child: Icon(Icons.phone),
+                          child: Column(
+                            children: [
+                              Expanded(
+                                child: ListView.builder(
+                                  itemCount: delivery.length,
+                                  itemBuilder: (context, index) {
+                                    var deliveryCustomer = delivery[index];
+                                    deliveryComplete = deliveryCustomer.completed;
+                                    deliveryReject = deliveryCustomer.rejected;
+                                    print(deliveryReject);
+                                    print("deliveryReject");
+                                    return Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: InkWell(
+                                        onTap: () => {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => CustomerLogs(
+                                                customerId:
+                                                    deliveryCustomer.customerId,
+                                                customerName: deliveryCustomer.name,
                                               ),
-                                            ],
+                                            ),
                                           ),
-                                          Text(
-                                              "Number of Bottles: ${deliveryCustomer.customerBottles}"),
-                                          Text(
-                                              "Address: ${deliveryCustomer.address}"),
-                                        ],
-                                      ),
-                                      trailing: IgnorePointer(
-                                        ignoring: deliveryComplete || deliveryReject ||
-                                            DateTime.now().weekday !=
-                                                selectedDayIndex,
-                                        child: IconButton(
-                                          icon: Icon(
-                                            deliveryComplete
-                                                ? Icons.check_circle : deliveryReject ? Icons.cancel
-                                                : Icons.pending,
-                                            color: deliveryComplete
-                                                ? Colors.green : deliveryReject ? Colors.red
-                                                : Colors.grey,
+                                        },
+                                        child: Card(
+                                          child: ListTile(
+                                            leading: CircleAvatar(
+                                              backgroundColor: Colors.blue,
+                                              child: Text(
+                                                "${index + 1}",
+                                                style: TextStyle(color: Colors.white),
+                                              ),
+                                            ),
+                                            title: Text("${deliveryCustomer.name}"),
+                                            subtitle: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  children: [
+                                                    Text("Phone: ${deliveryCustomer.phone}"),
+                                                    SizedBox(width: 5),
+                                                    InkWell(
+                                                      onTap: () {
+                                                        _launchPhoneApp(deliveryCustomer.phone);
+                                                      },
+                                                      child: Icon(Icons.phone),
+                                                    ),
+                                                  ],
+                                                ),
+                                                Text(
+                                                    "Number of Bottles: ${deliveryCustomer.customerBottles}"),
+                                                Text(
+                                                    "Address: ${deliveryCustomer.address}"),
+                                              ],
+                                            ),
+                                            trailing: IgnorePointer(
+                                              ignoring: deliveryComplete || deliveryReject ||
+                                                  DateTime.now().weekday !=
+                                                      selectedDayIndex,
+                                              child: IconButton(
+                                                icon: Icon(
+                                                  deliveryComplete
+                                                      ? Icons.check_circle : deliveryReject ? Icons.cancel
+                                                      : Icons.pending,
+                                                  color: deliveryComplete
+                                                      ? Colors.green : deliveryReject ? Colors.red
+                                                      : Colors.grey,
+                                                ),
+                                                onPressed: () {
+                                                  showDialog(
+                                                    context: context,
+                                                    builder: (BuildContext context) {
+                                                      return completeDialog(index);
+                                                    },
+                                                  );
+                                                },
+                                              ),
+                                            ),
                                           ),
-                                          onPressed: () {
-                                            showDialog(
-                                              context: context,
-                                              builder: (BuildContext context) {
-                                                return completeDialog(index);
-                                              },
-                                            );
-                                          },
                                         ),
                                       ),
-                                    ),
-                                  ),
+                                    );
+                                  },
                                 ),
-                              );
-                            },
+                              ),
+                              buildPaginationNumbers(totalDelivery, pageSize),
+                               SizedBox(
+                                   height: kBottomNavigationBarHeight+50),
+                            ],
                           ),
                         ),
                 ],
@@ -206,15 +226,10 @@ class _DelieveriesState extends State<Delieveries>
       scheme: 'tel',
       path: phoneNumber,
     );
-    if (await canLaunchUrl(phoneUri)) {
       await launchUrl(phoneUri);
-    } else {
-      throw 'Could not launch $phoneUri';
-    }
   }
 
-  Widget _buildDeliveryTab(bool isUpcoming) {
-    //isUpcoming ? GetUpcomingDelivery(selectedDayIndex)  :  GetUpcomingDelivery(8);
+  Widget _buildDeliveryTab() {
     return _buildDeliveryList(delivery);
   }
 
@@ -223,6 +238,7 @@ class _DelieveriesState extends State<Delieveries>
     double width = MediaQuery.of(context).size.width;
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: Center(child: Text('Deliveries',style: TextStyle(
             color: Colors.lightBlue,
             fontWeight: FontWeight.bold,
@@ -239,8 +255,8 @@ class _DelieveriesState extends State<Delieveries>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildDeliveryTab(true), // Upcoming Delivery
-          _buildDeliveryTab(false), // Urgent Delivery
+          _buildDeliveryTab(), // Upcoming Delivery
+          _buildDeliveryTab(), // Urgent Delivery
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -264,14 +280,6 @@ class _DelieveriesState extends State<Delieveries>
                       );
                     },
                   ),
-                  // ListTile(
-                  //   leading: Icon(Icons.add_a_photo),
-                  //   title: Text('Some Other Action'),
-                  //   onTap: () {
-                  //     Navigator.pop(context);
-                  //     // Add some other action functionality here
-                  //   },
-                  // ),
                 ],
               );
             },
@@ -361,24 +369,27 @@ class _DelieveriesState extends State<Delieveries>
   void fetchCustomerData(String search) async {
     searchResults.clear();
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString("token");
-      var params = {"search": search};
-      Map<String, dynamic> headers = {
-        'Authorization': 'Bearer $token',
+      var params = {
+        "search": search
       };
-      Response response = await dio.get('$base_url/Customer/GetAllCustomer',
-          queryParameters: params, options: Options(headers: headers));
+
+      Response response = await apiHelper.fetchData(
+        method: 'GET',
+        endpoint: 'Customer/GetAllCustomer',
+        params: params,
+      );
 
       // Handle response
       if (response.statusCode == 200) {
         var data = response.data['customerDetail'] as List;
+if(mounted){
+  _setState(() {
+    searchResults = data
+        .map((customerData) => Customer.fromMap(customerData))
+        .toList();
+  });
+}
 
-        _setState(() {
-          searchResults = data
-              .map((customerData) => Customer.fromMap(customerData))
-              .toList();
-        });
       } else {
         showToast("Error: ${response.data['detail']}");
       }
@@ -389,22 +400,21 @@ class _DelieveriesState extends State<Delieveries>
 
   void addUrgentDelivery(int customerId) async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString("token");
       var params = {"customerId": customerId};
-      Map<String, dynamic> headers = {
-        'Authorization': 'Bearer $token',
-      };
-      Response response = await dio.post('$base_url/Customer/AddUrgentDelivery',
-          queryParameters: params, options: Options(headers: headers));
-
+      Response response = await apiHelper.fetchData(
+        method: 'POST',
+        endpoint: 'Customer/AddUrgentDelivery',
+        params: params,
+      );
       // Handle response
       if (response.statusCode == 200) {
         showToast(" ${response.data['message']}");
       } else {
+        print(response.data['detail'].toString());
         showToast("Error: ${response.data['detail']}");
       }
     } catch (e) {
+      print(e);
       showToast("Error fetching data: $e");
     }
   }
@@ -417,13 +427,10 @@ class _DelieveriesState extends State<Delieveries>
     return AlertDialog(
       title: Text('Urgent Delivery'),
       content: StatefulBuilder(
-          builder: (BuildContext context, StateSetter setState) {
-        _setState = setState;
+        builder: (BuildContext context, StateSetter setState) {
+          _setState = setState; // Renamed _setState to _setStateCallback for clarity
 
-        return SizedBox(
-          width: double.maxFinite,
-          // Set the width to fill the available space
-          child: SingleChildScrollView(
+          return SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
@@ -432,8 +439,12 @@ class _DelieveriesState extends State<Delieveries>
                   keyboardType: TextInputType.text,
                   decoration: InputDecoration(labelText: 'Search user'),
                   onChanged: (query) {
-                    onSearchTextChanged(query);
-                    setState(() {}); // Update the dialog content
+                    try {
+                      onSearchTextChanged(query);
+                      setState(() {}); // Update the dialog content
+                    } catch (e) {
+                      // Handle error
+                    }
                   },
                   validator: (value) {
                     if (value!.isEmpty) {
@@ -442,64 +453,44 @@ class _DelieveriesState extends State<Delieveries>
                     return null;
                   },
                 ),
-                Container(
-                  height: 150,
-                  width: double.maxFinite,
-                  child: ListView.builder(
-                    itemCount: searchResults.length,
-                    itemBuilder: (context, index) {
-                      var customer = searchResults[index];
-                      return InkWell(
-                        onTap: () {
-                          searchController.text = customer.name;
-                          Navigator.pop(context); // Close the dialog
-                        },
-                        child: Container(
-                          height: 150,
-                          width: double.maxFinite,
-                          child: ListView.separated(
-                            itemCount: searchResults.length,
-                            separatorBuilder:
-                                (BuildContext context, int index) => Divider(),
-                            // Add Divider between items
-                            itemBuilder: (context, index) {
-                              var customer = searchResults[index];
-                              return InkWell(
-                                onTap: () {
-                                  searchController.text = customer.name;
-                                  selectedCustomerId = customer.id;
-                                  // Navigator.pop(context); // Close the dialog
-                                },
-                                child: Container(
-                                  padding: EdgeInsets.all(10),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        customer.name,
-                                        style: TextStyle(fontSize: 16),
-                                      ),
-                                      Text(
-                                        customer.phoneNumber,
-                                        style: TextStyle(fontSize: 16),
-                                      ),
-                                    ],
-                                  ),
+                if (searchResults != null) // Add null check for searchResults
+                  Container(
+                    height: 150,
+                    width: double.maxFinite,
+                    child: ListView.builder(
+                      itemCount: searchResults.length,
+                      itemBuilder: (context, index) {
+                        var customer = searchResults[index];
+                        return InkWell(
+                          onTap: () {
+                            searchController.text = customer.name;
+                            selectedCustomerId = customer.id;
+                          },
+                          child: Container(
+                            padding: EdgeInsets.all(10),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  customer.name,
+                                  style: TextStyle(fontSize: 16),
                                 ),
-                              );
-                            },
+                                Text(
+                                  customer.address,
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
-                ),
               ],
             ),
-          ),
-        );
-      }),
+          );
+        },
+      ),
       actions: <Widget>[
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -512,8 +503,12 @@ class _DelieveriesState extends State<Delieveries>
             ),
             TextButton(
               onPressed: () {
-                addUrgentDelivery(selectedCustomerId);
-                Navigator.pop(context);
+                if (selectedCustomerId != 0) {
+                  addUrgentDelivery(selectedCustomerId);
+                } else {
+                showToast("please try again");
+                }
+                Navigator.pop(context); // Close the dialog
               },
               child: Text('Done'),
             ),
@@ -576,37 +571,76 @@ class _DelieveriesState extends State<Delieveries>
   }
 
   void GetUpcomingDelivery(int day) async {
-    try {
-      setState(() {
-        _loading = true;
-      });
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString("token");
-      Map<String, dynamic> headers = {
-        'Authorization': 'Bearer $token',
-      };
-      var params = {"weekDaysEnum": day};
-      Response response = await dio.get(
-          '$base_url/Customer/GetCustomersByWeekDay',
-          queryParameters: params,
-          options: Options(headers: headers));
-
-      // Handle response
-      if (response.statusCode == 200) {
-        var data = response.data as List;
-        delivery = data.map((doc) {
-          return UpcomingDelivery.fromMap(doc);
-        }).toList();
-      } else {
-        showToast("Error: ${response.data['detail']}");
+    if(mounted){
+      try {
+        setState(() {
+          _loading = true;
+        });
+        var params = {
+          "weekDaysEnum": day,
+          "page": page,
+          "pageSize": pageSize,
+        };
+        Response response = await apiHelper.fetchData(
+          method: 'GET',
+          endpoint: 'Customer/GetCustomersByWeekDay',
+          params: params,
+        );
+        // Handle response
+        if (response.statusCode == 200) {
+          totalDelivery = response.data['totalDelivery'];
+          var data = response.data['customerByDeliveryDay'] as List;
+          delivery = data.map((doc) {
+            return UpcomingDelivery.fromMap(doc);
+          }).toList();
+        } else {
+          showToast("Error: ${response.data['detail']}");
+        }
+      } catch (e) {
+        showToast("Error fetching data: $e");
+      } finally {
+        setState(() {
+          _loading = false;
+        });
       }
-    } catch (e) {
-      showToast("Error fetching data: $e");
-    } finally {
-      setState(() {
-        _loading = false;
-      });
     }
+
+  }
+  Widget buildPaginationNumbers(int totalCustomers, int pageSize) {
+    print(totalCustomers);
+    print(pageSize);
+    int totalPages = (totalCustomers / pageSize).ceil();
+    List<int> pages = List.generate(totalPages, (index) => index + 1);
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: pages.map((pageNumber) {
+          return GestureDetector(
+            onTap: () {
+              page = pageNumber;
+              GetUpcomingDelivery(selectedDayIndex);
+            },
+            child: Container(
+              margin: EdgeInsets.symmetric(horizontal: 5),
+              padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              decoration: BoxDecoration(
+                color: page == pageNumber ? Colors.blue : Colors.grey,
+                borderRadius: BorderRadius.circular(5),
+              ),
+              child: Text(
+                '$pageNumber',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
   }
 
   void CompleteDelivery(
@@ -615,8 +649,6 @@ class _DelieveriesState extends State<Delieveries>
       setState(() {
         _loading = true;
       });
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString("token");
       var body = {
         "CustomerDeliveryId": request.CustomerDeliveryId,
         "CustomerId": request.CustomerId,
@@ -624,12 +656,13 @@ class _DelieveriesState extends State<Delieveries>
         "BottleBack": request.BottleBack,
         "AmountPaid": request.AmountPaid
       };
-      Map<String, dynamic> headers = {
-        'Authorization': 'Bearer $token',
-      };
-      Response response = await dio.post('$base_url/Customer/CompleteDelivery',
-          data: body, options: Options(headers: headers));
-      // Handle response
+
+      Response response = await apiHelper.fetchData(
+        method: 'POST',
+        endpoint: 'Customer/CompleteDelivery',
+        body: body,
+      );
+
       if (response.statusCode == 200) {
         _tabController.index == 0
             ? GetUpcomingDelivery(selectedDayIndex)
@@ -655,17 +688,16 @@ class _DelieveriesState extends State<Delieveries>
       setState(() {
         _loading = true;
       });
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString("token");
       var params = {
         "deliveryId": deliveryId
       };
-      Map<String, dynamic> headers = {
-        'Authorization': 'Bearer $token',
-      };
-      Response response = await dio.put('$base_url/Customer/RejectDelivery',
-          queryParameters: params, options: Options(headers: headers));
-      // Handle response
+
+      Response response = await apiHelper.fetchData(
+        method: 'POST',
+        endpoint: 'Customer/RejectDelivery',
+        params: params
+      );
+
       if (response.statusCode == 200) {
         _tabController.index == 0
             ? GetUpcomingDelivery(selectedDayIndex)
@@ -684,6 +716,38 @@ class _DelieveriesState extends State<Delieveries>
       });
     }
   }
+
+  void _initSocket() async {
+    SocketService serviceWaitingListTournament = SocketService(
+        hubName: 'customerList-hub',
+        groupMethodController: "AddToGroup",
+        groupBy: 2);
+    var connectionWaitingListTournament =
+        await serviceWaitingListTournament.initSocket();
+    connectionGetDeviceInfo(
+        connectionWaitingListTournament!);
+  }
+  void connectionGetDeviceInfo(HubConnection connection) {
+    connection.on('GetCustomerListing', (message) {
+      var response = message?[0];
+      response = response['customerByDeliveryDay'];
+      if (response is List<dynamic>) {
+        // Ensure response is a List
+        var list  = response.map((doc) {
+          return UpcomingDelivery.fromMap(Map<String, dynamic>.from(doc));
+          // Convert each dynamic object to an UpcomingDelivery object
+        }).toList();
+        delivery.addAll(list);
+      } else {
+        // Handle unexpected data format
+        print('Unexpected response format: $response');
+      }
+      setState(() {
+
+      });
+    });
+  }
+
 
 }
 

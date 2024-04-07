@@ -1,8 +1,6 @@
 import 'dart:convert';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dio/dio.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:water_managment_system/pages/customer_details.dart';
@@ -10,7 +8,8 @@ import 'package:water_managment_system/pages/register_customer.dart';
 
 import '../db_model/constants.dart';
 import '../db_model/customer.dart';
-import 'logs.dart';
+import '../helper/api_helper.dart';
+import 'customer_logs.dart';
 class Customers extends StatefulWidget {
   const Customers();
 
@@ -22,48 +21,93 @@ class _MyMainPageState extends State<Customers> {
   late List<Customer> customers = []; // Provide an initial empty list
   bool _loading = false; // Track whether data is being loaded
   Dio dio = Dio();
+  int pageSize = 5;
+  int page = 1;
+  int totalCustomers = 0;
+  ApiHelper apiHelper = ApiHelper();
+
   final TextEditingController searchController = TextEditingController();
+  //final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    // Fetch customer data when the widget initializes
     fetchCustomerData("");
+    //_scrollController.addListener(_scrollListener);
   }
-  void fetchCustomerData(String search ) async {
+  // void _scrollListener() {
+  //   if (_scrollController.position.pixels ==
+  //       _scrollController.position.maxScrollExtent) {
+  //     page++; // Increment page number when scrolled to the bottom
+  //     fetchCustomerData(searchController.text, page, pageSize);
+  //   }
+  // }
+
+  void fetchCustomerData(String search) async {
     try {
-      // setState(() {
-      //   _loading=true;
-      // });
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString("token");
-      Map<String, dynamic> headers = {
-        'Authorization': 'Bearer $token',
+      var params = {
+        "search": search,
+        "page": page,
+        "pageSize": pageSize,
       };
-      var params = {"search": search};
-
-      Response response = await dio.get('$base_url/Customer/GetAllCustomer',queryParameters: params, options: Options(headers: headers));
-
+      Response response = await apiHelper.fetchData(
+        method: 'GET',
+        endpoint: 'Customer/GetAllCustomer',
+        params: params,
+      );
       // Handle response
       if (response.statusCode == 200) {
-        var data  = response.data['customerDetail'] as List;
-        customers = data
-            .map((customerData) => Customer.fromMap(customerData))
-            .toList();
-        setState(() {
+        if(mounted){
+          totalCustomers = response.data['totalCustomer'];
+          var data = response.data['customerDetail'] as List;
+          customers = data
+              .map((customerData) => Customer.fromMap(customerData))
+              .toList();
+          setState(() {
+          });
+        }
 
-        });
       } else {
         showToast("Error: ${response.data['detail']}");
       }
     } catch (e) {
       showToast("Error fetching data: $e");
     }
-    // finally{
-    //   setState(() {
-    //     _loading=false;
-    //   });
-    // }
+  }
+
+  Widget buildPaginationNumbers(int totalCustomers, int pageSize) {
+    int totalPages = (totalCustomers / pageSize).ceil();
+    List<int> pages = List.generate(totalPages, (index) => index + 1);
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: pages.map((pageNumber) {
+          return GestureDetector(
+            onTap: () {
+              page = pageNumber;
+              fetchCustomerData(searchController.text);
+            },
+            child: Container(
+              margin: EdgeInsets.symmetric(horizontal: 5),
+              padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              decoration: BoxDecoration(
+                color: page == pageNumber ? Colors.blue : Colors.grey,
+                borderRadius: BorderRadius.circular(5),
+              ),
+              child: Text(
+                '$pageNumber',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
   }
 
   @override
@@ -72,7 +116,8 @@ class _MyMainPageState extends State<Customers> {
     double height = MediaQuery.of(context).size.height;
     return Scaffold(
       appBar: AppBar(
-        title: Center(child: Text('Registered Customers',style: TextStyle(
+          automaticallyImplyLeading: false, // Disable the back button
+          title: Center(child: Text('Registered Customers',style: TextStyle(
             color: Colors.lightBlue,
             fontWeight: FontWeight.bold,
             fontSize: width * 0.07),
@@ -81,102 +126,102 @@ class _MyMainPageState extends State<Customers> {
       body: _loading
           ? Center(child: CircularProgressIndicator()) // Show loader if loading
           : SingleChildScrollView(
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Center(
-              //   child: Text(
-              //     "Registered Customers",
-              //     style: TextStyle(
-              //         color: Colors.lightBlue,
-              //         fontWeight: FontWeight.bold,
-              //         fontSize: width * 0.08),
-              //   ),
-              // ),
-              TextFormField(
-                controller: searchController,
-                keyboardType: TextInputType.text,
-                decoration: InputDecoration(hintText: 'Search user',contentPadding: EdgeInsets.all(10)),
-                onChanged: (query) {
-                  fetchCustomerData(query);
-                  setState(() {}); // Update the dialog content
-                },
+            child: SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: searchController,
+                    keyboardType: TextInputType.text,
+                    decoration: InputDecoration(hintText: 'Search customer',contentPadding: EdgeInsets.all(10)),
+                    onChanged: (query) {
+                      page = 1;
+                      fetchCustomerData(query);
+                    },
 
-              ),
-              customers.length!=0 ?
-              Container(
-                height: height * 0.8,
-                width: width,
-                child: ListView.builder(
-                  itemCount: customers.length,
-                  itemBuilder: (context, index) {
-                    Customer customer = customers[index];
-                    return Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Card(
-                        child: ListTile(
-                          leading: InkWell(
-                            onTap: ()=>{
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CustomerLogs(
-                                    customerId:
-                                  customer.id,
-                                    customerName: customer.name,
+                  ),
+                  customers.length!=0 ?
+                  Container(
+                    height: height * 0.8,
+                    width: width,
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: ListView.builder(
+                            //controller: _scrollController,
+                            itemCount: customers.length,
+                            itemBuilder: (context, index) {
+                              Customer customer = customers[index];
+                              return Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Card(
+                                  child: ListTile(
+                                    leading: InkWell(
+                                      onTap: ()=>{
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => CustomerLogs(
+                                              customerId:
+                                            customer.id,
+                                              customerName: customer.name,
+                                            ),
+                                          ),
+                                        ),
+                                      },
+                                      child: CircleAvatar(
+                                        backgroundColor: Colors.blue,
+                                        child: Text(
+                                          "${index + 1}",
+                                          style: TextStyle(color: Colors.white),
+                                        ),
+                                      ),
+                                    ),
+                                    title: Text("${customer.name}",
+                                        style: TextStyle(
+                                            overflow: TextOverflow.ellipsis)),
+                                    subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text("Phone: ${customer.phoneNumber}",
+                                            style: TextStyle(
+                                                overflow: TextOverflow.ellipsis)),
+                                        Text("Address: ${customer.address}",
+                                            style: TextStyle(
+                                                overflow: TextOverflow.ellipsis)),
+                                      ],
+                                    ),
+                                    trailing: ElevatedButton(
+                                      onPressed: () {
+                                        // Navigate to view customer details page
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                CustomerDetails(customer: customer),
+                                          ),
+                                        );
+                                      },
+                                      child: Text('View Details'),
+                                    ),
                                   ),
-                                ),
-                              ),
-                            },
-                            child: CircleAvatar(
-                              backgroundColor: Colors.blue,
-                              child: Text(
-                                "${index + 1}",
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          ),
-                          title: Text("${customer.name}",
-                              style: TextStyle(
-                                  overflow: TextOverflow.ellipsis)),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text("Phone: ${customer.phoneNumber}",
-                                  style: TextStyle(
-                                      overflow: TextOverflow.ellipsis)),
-                              Text("Address: ${customer.address}",
-                                  style: TextStyle(
-                                      overflow: TextOverflow.ellipsis)),
-                            ],
-                          ),
-                          trailing: ElevatedButton(
-                            onPressed: () {
-                              // Navigate to view customer details page
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      CustomerDetails(customer: customer),
                                 ),
                               );
                             },
-                            child: Text('View Details'),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-              ) : Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Center(child: Text("No resgitered customer found"),),
+                        buildPaginationNumbers(totalCustomers, pageSize),
+                        const SizedBox(height: kBottomNavigationBarHeight-5),
+                      ],
+                    ),
+                  ) : Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Center(child: Text("No resgitered customer found"),),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           showModalBottomSheet(
@@ -197,14 +242,6 @@ class _MyMainPageState extends State<Customers> {
                       );
                     },
                   ),
-                  // ListTile(
-                  //   leading: Icon(Icons.add_a_photo),
-                  //   title: Text('Some Other Action'),
-                  //   onTap: () {
-                  //     Navigator.pop(context);
-                  //     // Add some other action functionality here
-                  //   },
-                  // ),
                 ],
               );
             },

@@ -1,6 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dio/dio.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +8,7 @@ import 'package:water_managment_system/pages/main_page.dart';
 import 'package:water_managment_system/pages/register_customer.dart';
 
 import '../db_model/constants.dart';
+import '../helper/api_helper.dart';
 
 class CustomerDetails extends StatefulWidget {
   final Customer customer;
@@ -26,6 +25,8 @@ class _CustomerDetailsState extends State<CustomerDetails> {
   bool isChecked = false;
 Dio dio=Dio();
 bool _loading=false;
+  ApiHelper apiHelper = ApiHelper();
+
   // Sample data for days of the week
   List<bool> weekDays = [false, false, false, false, false, false, false,false];
 
@@ -239,15 +240,10 @@ bool _loading=false;
       scheme: 'tel',
       path: phoneNumber,
     );
-    if (await canLaunchUrl(phoneUri)) {
       await launchUrl(phoneUri);
-    } else {
-      throw 'Could not launch $phoneUri';
-    }
   }
   Widget buildCard(String title, String value, double width) {
     return SizedBox(
-      height: width*0.2,
       width: width / 2 - 8,
       child: Card(
         child: Padding(
@@ -328,14 +324,12 @@ bool _loading=false;
       setState(() {
         _loading = true;
       });
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString("token");
-      Map<String, dynamic> headers = {
-        'Authorization': 'Bearer $token',
-      };
       var params = {"customerId": customerId};
-
-      Response response = await dio.post('$base_url/Customer/DeleteCustomer', queryParameters: params, options: Options(headers: headers));
+      Response response = await apiHelper.fetchData(
+          method: 'POST',
+          endpoint: 'Customer/DeleteCustomer',
+          params: params
+      );
 
       // Handle response
       if (response.statusCode == 200) {

@@ -1,6 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dio/dio.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,6 +6,7 @@ import 'package:water_managment_system/db_model/customer.dart';
 import 'package:water_managment_system/pages/main_page.dart';
 
 import '../db_model/constants.dart';
+import '../helper/api_helper.dart';
 import 'customers.dart';
 
 class RegisterCustomer extends StatefulWidget {
@@ -30,7 +29,8 @@ class _RegisterCustomerState extends State<RegisterCustomer> {
   late TextEditingController emailAddressController;
   List<bool?> weekDays = [false, false, false, false, false, false, false,false];
   List<int> selectedWeekDays = [];
-Dio dio = Dio();
+  ApiHelper apiHelper = ApiHelper();
+
 bool _loading=false;
   @override
   void initState() {
@@ -60,123 +60,155 @@ bool _loading=false;
     bottlePriceController.dispose();
     super.dispose();
   }
+  bool validateNumeric(String value) {
+    final numericRegex = RegExp(r'^[0-9]+$');
+    return numericRegex.hasMatch(value);
+  }
   @override
   Widget build(BuildContext context) {
 
     double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
-    return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextFormField(
-                    controller: userNameController,
-                    decoration: InputDecoration(labelText: 'User Name'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'User name is required';
-                      }
-                      return null;
-                    },
-                  ),
-                  TextFormField(
-                    controller: userAddressController,
-                    decoration: InputDecoration(labelText: 'User Address'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'User address is required';
-                      }
-                      return null;
-                    },
-                  ),
-                  TextFormField(
-                    controller: userNumberController,
-                    decoration: InputDecoration(labelText: 'User Number'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'User number is required';
-                      }
-                      return null;
-                    },
-                    keyboardType: TextInputType.phone,
-                  ),
-                  // TextFormField(
-                  //   controller: bottlesTakenController,
-                  //   decoration: InputDecoration(labelText: 'Number of Bottles Taken'),
-                  //   validator: (value) {
-                  //     if (value == null || value.isEmpty) {
-                  //       return 'Number of bottles taken is required';
-                  //     }
-                  //     return null;
-                  //   },
-                  //   keyboardType: TextInputType.number,
-                  // ),
-                  TextFormField(
-                    controller: totalAdvanceController,
-                    decoration: InputDecoration(labelText: 'Total Advance'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Total advance is required';
-                      }
-                      return null;
-                    },
-                    keyboardType: TextInputType.number,
-                  ),
-                  TextFormField(
-                    controller: bottlePriceController,
-                    decoration: InputDecoration(labelText: 'Bottle Price'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Bottle Price is required';
-                      }
-                      return null;
-                    },
-                    keyboardType: TextInputType.number,
-                  ),
-
-                  TextFormField(
-                    controller: emailAddressController,
-                    decoration: InputDecoration(labelText: 'Email Address (Optional)'),
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-                  SizedBox(height: 20),
-                  buildWeekDays(width),
-                  SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () async{
-                      if (_formKey.currentState!.validate()) {
-                        selectedWeekDays.clear();
-                        for (int i = 0; i < weekDays.length; i++) {
-                          if (weekDays[i] ?? false) {
-                            selectedWeekDays.add(i + 1);
-                          }
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pop(context);
+        Navigator.pop(context);
+        // Navigator.pushReplacement(
+        //   context,
+        //   MaterialPageRoute(builder: (context) => MainPage(initialTabIndex: 0,)), // Replace CalendarWidget with your actual calendar widget
+        // );
+        return true;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          toolbarHeight: 30,
+        ),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextFormField(
+                      controller: userNameController,
+                      decoration: InputDecoration(labelText: 'User Name'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'User name is required';
                         }
-                        Customer Newcustomer = Customer(
-                          weekDaysList:selectedWeekDays,
-                          amountDue: widget.forEdit ? widget.customer!.amountDue  : 0,
-                          totalAmountPaid: widget.forEdit ? widget.customer!.totalAmountPaid  : 0,
-                          name: userNameController.text,
-                          address: userAddressController.text,
-                          phoneNumber: userNumberController.text,
-                          bottles: 0  ,
-                          advanceMoney: int.parse(totalAdvanceController.text),
-                          email: emailAddressController.text,
-                          id:widget.forEdit ? widget.customer!.id : 0,
-                          bottlePrice: int.parse(bottlePriceController.text),
-                        );
-                        CreateCustomerAsync(Newcustomer);
+                        return null;
+                      },
+                    ),
+                    TextFormField(
+                      controller: userAddressController,
+                      decoration: InputDecoration(labelText: 'User Address'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'User address is required';
+                        }
+                        return null;
+                      },
+                    ),
+                    TextFormField(
+                      controller: userNumberController,
+                      decoration: InputDecoration(labelText: 'User Number'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'User number is required';
+                        }
+                        return null;
+                      },
+                      keyboardType: TextInputType.phone,
+                    ),
+                    // TextFormField(
+                    //   controller: bottlesTakenController,
+                    //   decoration: InputDecoration(labelText: 'Number of Bottles Taken'),
+                    //   validator: (value) {
+                    //     if (value == null || value.isEmpty) {
+                    //       return 'Number of bottles taken is required';
+                    //     }
+                    //     return null;
+                    //   },
+                    //   keyboardType: TextInputType.number,
+                    // ),
+                    TextFormField(
+                      controller: totalAdvanceController,
+                      decoration: InputDecoration(labelText: 'Total Advance'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Total advance is required';
+                        }
+                        return null;
+                      },
+                      keyboardType: TextInputType.number,
+                      onChanged: (value) {
+                        if (!validateNumeric(value)) {
+                          // Clear the field if it contains non-numeric characters
+                          totalAdvanceController.clear();
+                        }
+                        // Handle changes to the bottle rate here if needed
+                      },
+                    ),
+                    TextFormField(
+                      controller: bottlePriceController,
+                      decoration: InputDecoration(labelText: 'Bottle Price'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Bottle Price is required';
+                        }
+                        return null;
+                      },
+                      keyboardType: TextInputType.number,
+                      onChanged: (value) {
+                        if (!validateNumeric(value)) {
+                          // Clear the field if it contains non-numeric characters
+                          bottlePriceController.clear();
+                        }
+                        // Handle changes to the bottle rate here if needed
+                      },
+                    ),
 
-                      }
-                    },
-                    child:_loading ? CircularProgressIndicator() : Text( widget.forEdit ? 'Edit' : 'Submit'),
-                  ),
-                ],
+                    TextFormField(
+                      controller: emailAddressController,
+                      decoration: InputDecoration(labelText: 'Email Address (Optional)'),
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    SizedBox(height: 20),
+                    buildWeekDays(width),
+                    SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () async{
+                        if (_formKey.currentState!.validate()) {
+                          selectedWeekDays.clear();
+                          for (int i = 0; i < weekDays.length; i++) {
+                            if (weekDays[i] ?? false) {
+                              selectedWeekDays.add(i + 1);
+                            }
+                          }
+                          Customer Newcustomer = Customer(
+                            weekDaysList:selectedWeekDays,
+                            amountDue: widget.forEdit ? widget.customer!.amountDue  : 0,
+                            totalAmountPaid: widget.forEdit ? widget.customer!.totalAmountPaid  : 0,
+                            name: userNameController.text,
+                            address: userAddressController.text,
+                            phoneNumber: userNumberController.text,
+                            bottles: 0  ,
+                            advanceMoney: int.parse(totalAdvanceController.text),
+                            email: emailAddressController.text,
+                            id:widget.forEdit ? widget.customer!.id : 0,
+                            bottlePrice: int.parse(bottlePriceController.text),
+                          );
+                          CreateCustomerAsync(Newcustomer);
+
+                        }
+                      },
+                      child:_loading ? CircularProgressIndicator() : Text( widget.forEdit ? 'Edit' : 'Submit'),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -262,15 +294,11 @@ bool _loading=false;
       setState(() {
         _loading = true;
       });
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString("token");
-      Map<String, dynamic> headers = {
-        'Authorization': 'Bearer $token',
-      };
+
       var body = {
         "WeekDaysList":customer.weekDaysList,
         "CustomerId":customer.id,
-        "Bottles":customer.bottles,
+        //"Bottles":customer.bottles,
         "BottlePrice":customer.bottlePrice,
         "AdvanceMoney":customer.advanceMoney,
         "Name":customer.name,
@@ -278,7 +306,11 @@ bool _loading=false;
         "Address":customer.address,
         "Email":customer.email
       };
-      Response response = await dio.post('$base_url/Customer/CreateCustomer', data: body,options: Options(headers: headers));
+      Response response = await apiHelper.fetchData(
+          method: 'POST',
+          endpoint: 'Customer/CreateCustomer',
+          body : body
+      );
 
       // Handle response
       if (response.statusCode == 200) {

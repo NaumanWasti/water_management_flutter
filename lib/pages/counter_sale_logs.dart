@@ -1,19 +1,37 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:water_managment_system/helper/api_helper.dart';
 
+import '../db_model/constants.dart';
 import '../db_model/counter_sale_logs.dart';
 
 class CounterSaleLogs extends StatefulWidget {
-  final List<CounterSaleLogsModel> counterSaleLogsModel;
-  const CounterSaleLogs({super.key,required this.counterSaleLogsModel});
+  // final List<CounterSaleLogsModel> counterSaleLogsModel;
+  final bool dayWiseLogs;
+  final DateTime dateTime;
+  const CounterSaleLogs({super.key, required this.dayWiseLogs, required this.dateTime});
 
   @override
   State<CounterSaleLogs> createState() => _CounterSaleLogsState();
 }
 
 class _CounterSaleLogsState extends State<CounterSaleLogs> {
+  Dio dio = Dio();
   bool _loading = false;
+  int pageSize = 10;
+  int counterSaleCount = 0;
+  int page = 1;
+  late List<CounterSaleLogsModel> counterSalesList = [];
+ApiHelper apiHelper = new ApiHelper();
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    GetCounterSales(widget.dateTime);
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -25,33 +43,115 @@ class _CounterSaleLogsState extends State<CounterSaleLogs> {
           : SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: SingleChildScrollView(
-          child: DataTable(
-            columns: [
-              DataColumn(label: Text('Water Rate')),
-              DataColumn(label: Text('Sale Date Time')),
-            ],
-            rows: widget.counterSaleLogsModel.map((log) {
-              return DataRow(
-                cells: [
-                  DataCell(Text(log.bottleRate.toString())),
-                  DataCell(Text(formatDateTime(log.saleDateTime))),
+          child: Column(
+            children: [
+              DataTable(
+                columnSpacing: 120,
+                columns: [
+                  DataColumn(label: Text('Water Rate')),
+                  DataColumn(label: Text('Sale Date Time')),
                 ],
-              );
-            }).toList(),
+                rows: counterSalesList.map((log) {
+                  return DataRow(
+                    cells: [
+                      DataCell(Text(log.bottleRate.toString())),
+                      DataCell(Text(formatDateTime(log.saleDateTime))),
+                    ],
+                  );
+                }).toList(),
+              ),
+              buildPaginationNumbers(counterSaleCount, pageSize),
+            ],
           ),
+
         ),
       ),
     );
   }
+  void GetCounterSales(DateTime dateTime) async {
+    try {
+      if (!mounted) return;
+
+      setState(() {
+        _loading = true;
+      });
+
+      var params = {
+        "dayWiseLogs":widget.dayWiseLogs,
+        "date":dateTime,
+        "page":page,
+        "pageSize":pageSize,
+      };
+      Response response = await apiHelper.fetchData(
+        method: 'GET',
+        endpoint: 'Customer/GetCounterSales',
+        params: params,
+      );
+
+      if (response.statusCode == 200) {
+        counterSaleCount = response.data['totalCounterSales'];
+        var data = response.data['counterSaleLog'] as List;
+        counterSalesList = data
+            .map((customerData) => CounterSaleLogsModel.fromJson(customerData))
+            .toList();
+      } else {
+        showToast("Error: ${response.data['detail']}");
+      }
+    } catch (e) {
+      showToast("Error fetching data: $e");
+    } finally {
+      if (mounted) { // Check if widget is mounted before calling setState
+        setState(() {
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  Widget buildPaginationNumbers(int totalCustomers, int pageSize) {
+    int totalPages = (totalCustomers / pageSize).ceil();
+    List<int> pages = List.generate(totalPages, (index) => index + 1);
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: pages.map((pageNumber) {
+          return GestureDetector(
+            onTap: () {
+              page = pageNumber;
+              GetCounterSales(widget.dateTime);
+            },
+            child: Visibility(
+              visible: totalPages>1,
+              child: Container(
+                margin: EdgeInsets.symmetric(horizontal: 5),
+                padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                decoration: BoxDecoration(
+                  color: page == pageNumber ? Colors.blue : Colors.grey,
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: Text(
+                  '$pageNumber',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   String formatDateTime(String dateTimeString) {
-    // Define the format string that matches the format of dateTimeString
+    // Define the format string that matches the format \of dateTimeString
     String format = 'M/d/yyyy h:mm:ss a';
 
     // Parse the string into a DateTime object using the custom format
     DateTime dateTime = DateFormat(format).parse(dateTimeString);
-
-    // Adjust the time to your local time zone (+5 GMT)
-    dateTime = dateTime.add(Duration(hours: 5));
 
     // Format the adjusted DateTime into a simpler format
     return DateFormat('yyyy-MM-dd hh:mm:ss a').format(dateTime);
