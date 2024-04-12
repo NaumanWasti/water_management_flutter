@@ -32,6 +32,8 @@ class _DelieveriesState extends State<Delieveries>
   bool deliveryReject = false;
   int pageSize = 5;
   int page = 1;
+  int pageSizeSearch = 5;
+  int pageSearch = 1;
   int totalDelivery = 0;
   ApiHelper apiHelper = ApiHelper();
   late List<UpcomingDelivery> delivery = [];
@@ -370,7 +372,9 @@ class _DelieveriesState extends State<Delieveries>
     searchResults.clear();
     try {
       var params = {
-        "search": search
+        "search": search,
+        "page": pageSearch,
+        "pageSize": pageSizeSearch,
       };
 
       Response response = await apiHelper.fetchData(
@@ -381,6 +385,7 @@ class _DelieveriesState extends State<Delieveries>
 
       // Handle response
       if (response.statusCode == 200) {
+        print(response);
         var data = response.data['customerDetail'] as List;
 if(mounted){
   _setState(() {
@@ -394,7 +399,6 @@ if(mounted){
         showToast("Error: ${response.data['detail']}");
       }
     } catch (e) {
-      showToast("Error fetching data: $e");
     }
   }
 
@@ -415,7 +419,6 @@ if(mounted){
       }
     } catch (e) {
       print(e);
-      showToast("Error fetching data: $e");
     }
   }
 
@@ -441,7 +444,6 @@ if(mounted){
                   onChanged: (query) {
                     try {
                       onSearchTextChanged(query);
-                      setState(() {}); // Update the dialog content
                     } catch (e) {
                       // Handle error
                     }
@@ -597,7 +599,6 @@ if(mounted){
           showToast("Error: ${response.data['detail']}");
         }
       } catch (e) {
-        showToast("Error fetching data: $e");
       } finally {
         setState(() {
           _loading = false;
@@ -673,7 +674,6 @@ if(mounted){
         print("Error: ${response.data['detail']}");
       }
     } catch (e) {
-      showToast("Error fetching data: $e");
       print("Error fetching data: $e");
     } finally {
       setState(() {
@@ -708,7 +708,6 @@ if(mounted){
         print("Error: ${response.data['detail']}");
       }
     } catch (e) {
-      showToast("Error fetching data: $e");
       print("Error fetching data: $e");
     } finally {
       setState(() {

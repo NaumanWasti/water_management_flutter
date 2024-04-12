@@ -40,18 +40,22 @@ class _CustomerLogsState extends State<CustomerLogs> {
         itemCount: customerLogs.length,
         itemBuilder: (context, index) {
           final log = customerLogs[index];
+          var date = DateTime.parse(log.deliveryDateTime);
+          date  = date.add(Duration(hours: 5));
           return Card(
             child: ListTile(
+
+              trailing: Text(log.deliveryDay),
               title: Text('Water given: ${log.waterBottlesGiven}'),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Bottles Back: ${log.bottleBack}'),
                   Text('Amount Paid: ${log.amountPaid}'),
-                  Text('Delivery Time: ${formatDateTime(log.deliveryDateTime)}'),
+                  Text('Delivery Time: ${formatDateTime(date.toString())}'),
                 ],
               ),
-              tileColor: log.deliveryDay == 'Urgent' ? Colors.redAccent : Colors.white,
+              //tileColor: log.deliveryDay == 'Urgent' ? Colors.redAccent : Colors.white,
             ),
           );
         },
@@ -90,7 +94,6 @@ class _CustomerLogsState extends State<CustomerLogs> {
         showToast("Error: ${response.data['detail']}");
       }
     } catch (e) {
-      showToast("Error fetching data: $e");
     } finally {
       setState(() {
         _loading = false;

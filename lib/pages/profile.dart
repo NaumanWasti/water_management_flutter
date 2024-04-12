@@ -20,6 +20,7 @@ class _ProfileState extends State<Profile> {
   TextEditingController numberOfBottles = TextEditingController();
   TextEditingController bottleRate = TextEditingController();
   Dio dio = Dio();
+  bool loader = false;
   ApiHelper apiHelper = ApiHelper();
 
   var date =  DateTime.now();
@@ -39,6 +40,9 @@ class _ProfileState extends State<Profile> {
 
   void GetBusinessInfo() async {
     if (!mounted) return;
+    setState(() {
+      loader = true;
+    });
       try {
         Response response = await apiHelper.fetchData(
           method: 'GET',
@@ -55,7 +59,9 @@ class _ProfileState extends State<Profile> {
           showToast("Error: ${response.data['detail']}");
         }
       } catch (e) {
-        showToast("Error fetching data: $e");
+      }
+      finally {
+        loader = false;
       }
     }
 
@@ -80,7 +86,6 @@ class _ProfileState extends State<Profile> {
         showToast("Error: ${response.data['detail']}");
       }
     } catch (e) {
-      showToast("Error fetching data: $e");
     } finally {
       setState(() {
       });
@@ -93,7 +98,7 @@ class _ProfileState extends State<Profile> {
     double width = MediaQuery.of(context).size.width;
     double widgetSpacing = width * 0.05;
 
-    return SingleChildScrollView(
+    return  loader ? Center( child: CircularProgressIndicator(), ) : SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -226,9 +231,7 @@ class _ProfileState extends State<Profile> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => Analytics(
-                          month: date.month,
-                          day: date.day,
-                          year: date.year,
+                          date: date,
                         ),
                       ),
                     );

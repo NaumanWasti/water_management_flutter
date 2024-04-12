@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../db_model/constants.dart';
@@ -8,10 +9,8 @@ import '../db_model/get_expense_response.dart';
 import '../helper/api_helper.dart';
 
 class ExpenseLogsPage extends StatefulWidget {
-  final int day;
-  final int month;
-  final int year;
-  const ExpenseLogsPage({super.key, required this.day, required this.month, required this.year});
+  final DateTime date;
+  const ExpenseLogsPage({super.key, required this.date});
 
   @override
   State<ExpenseLogsPage> createState() => _ExpenseLogsPageState();
@@ -230,7 +229,13 @@ class _ExpenseLogsPageState extends State<ExpenseLogsPage> {
   }
 
 
+  String formatDateTime(String dateTimeString) {
+    DateTime dateTime = DateTime.parse(dateTimeString);
+    return DateFormat('yyyy-MM-dd hh:mm:ss a').format(dateTime);
+  }
   void _showFullDescription(ExpenseModel expense) {
+    var date = DateTime.parse(expense.ExpenseDate);
+    date  = date.add(Duration(hours: 5));
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -242,6 +247,7 @@ class _ExpenseLogsPageState extends State<ExpenseLogsPage> {
             children: [
             //  Text("Description: ${expense.ExpenseDescription}"),
               Text("Amount: ${expense.ExpenseAmount}"),
+              Text("Date: ${formatDateTime(date.toString())}"),
             ],
           ),
           actions: <Widget>[
@@ -356,9 +362,7 @@ class _ExpenseLogsPageState extends State<ExpenseLogsPage> {
         "search": search,
         "sortAscending": sortingOption == SortingOption.asc ? true : false,
         "sortDescending": sortingOption == SortingOption.desc ? true : false,
-        "day":widget.day,
-        "month":widget.month,
-        "year":widget.year
+        "date":widget.date,
       };
       Response response = await apiHelper.fetchData(
           method: 'GET',
@@ -379,7 +383,6 @@ class _ExpenseLogsPageState extends State<ExpenseLogsPage> {
         showToast("Error: ${response.data['detail']}");
       }
     } catch (e) {
-      showToast("Error fetching data: $e");
     }
 
   }
@@ -412,7 +415,6 @@ void addExpense(ExpenseModel request) async {
     } catch (e) {
 
       print(e);
-      showToast("Error fetching data: $e");
     }
     finally{
       setState(() {
@@ -445,7 +447,6 @@ void addExpense(ExpenseModel request) async {
     } catch (e) {
 
       print(e);
-      showToast("Error fetching data: $e");
     }
     finally{
       setState(() {

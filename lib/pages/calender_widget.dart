@@ -36,7 +36,7 @@ class _CalenderWidgetState extends State<CalenderWidget> {
       onWillPop: () async {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => Analytics(month: _focusedDay.month, day: _focusedDay.day, year: _focusedDay.year,)), // Replace CalendarWidget with your actual calendar widget
+          MaterialPageRoute(builder: (context) => Analytics(date: _focusedDay,)), // Replace CalendarWidget with your actual calendar widget
         );
         return true;
       },
@@ -67,7 +67,7 @@ class _CalenderWidgetState extends State<CalenderWidget> {
                 onPressed: () {
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => Analytics(month: _focusedDay.month, day: _focusedDay.day, year: _focusedDay.year,)), // Replace CalendarWidget with your actual calendar widget
+                    MaterialPageRoute(builder: (context) => Analytics(date: _focusedDay,)), // Replace CalendarWidget with your actual calendar widget
                   );
                   },
                 child: Text('Check Analytics'),

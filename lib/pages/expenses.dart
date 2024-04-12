@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../db_model/constants.dart';
@@ -226,8 +227,13 @@ class _ExpensePageState extends State<ExpensePage> {
     );
   }
 
-
+  String formatDateTime(String dateTimeString) {
+    DateTime dateTime = DateTime.parse(dateTimeString);
+    return DateFormat('yyyy-MM-dd hh:mm:ss a').format(dateTime);
+  }
   void _showFullDescription(ExpenseModel expense) {
+    var date = DateTime.parse(expense.ExpenseDate);
+    date  = date.add(Duration(hours: 5));
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -239,6 +245,7 @@ class _ExpensePageState extends State<ExpensePage> {
             children: [
               //Text("Description: ${expense.ExpenseDescription}"),
               Text("Amount: ${expense.ExpenseAmount}"),
+              Text("Date: ${formatDateTime(date.toString())}"),
             ],
           ),
           actions: <Widget>[
@@ -386,8 +393,9 @@ class _ExpensePageState extends State<ExpensePage> {
       } else {
         showToast("Error: ${response.data['detail']}");
       }
-    } catch (e) {
-      showToast("Error fetching data: $e");
+    }
+    catch (e){
+      print(e);
     }
 
   }
@@ -424,7 +432,6 @@ void addExpense(ExpenseModel request) async {
     } catch (e) {
 
       print(e);
-      showToast("Error fetching data: $e");
     }
     finally{
       setState(() {
@@ -457,7 +464,6 @@ void addExpense(ExpenseModel request) async {
     } catch (e) {
 
       print(e);
-      showToast("Error fetching data: $e");
     }
     finally{
       setState(() {

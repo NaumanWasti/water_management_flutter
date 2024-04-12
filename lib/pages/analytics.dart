@@ -14,10 +14,8 @@ import 'customer_logs_daywise.dart';
 import 'expenses_logs.dart';
 
 class Analytics extends StatefulWidget {
-  final int day;
-  final int month;
-  final int year;
-  const Analytics({super.key,required this.month,required this.day, required this.year});
+  final DateTime date;
+  const Analytics({super.key,required this.date});
 
   @override
   State<Analytics> createState() => _AnalyticsState();
@@ -30,54 +28,56 @@ class _AnalyticsState extends State<Analytics> {
   int totalDeliverySales = 0;
   int counterSaleCount = 0;
   late List<CounterSaleLogsModel> counterSalesList = [];
-  late DateTime selectedMonth = DateTime.now();
+ // late DateTime selectedMonth = DateTime.now();
   ApiHelper apiHelper = ApiHelper();
-
+bool loader = false;
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    GetBusinessInfo();
-    selectedMonth = DateTime(widget.year, widget.month, widget.day);
+    GetAnalytics();
+    //selectedMonth = DateTime(widget.year, widget.month, widget.day);
    // GetCounterSales(selectedMonth);
 
   }
-  void GetCounterSales(DateTime dateTime) async {
-    try {
-      if (!mounted) return;
-      var params = {
-        "date":dateTime,
-        "dayWiseLogs":true
-      };
-      Response response = await apiHelper.fetchData(
-          method: 'GET',
-          endpoint: 'Customer/GetCounterSales',
-          params: params
-      );
-      if (response.statusCode == 200) {
-        counterSaleCount = response.data['totalCounterSales'];
-        var data = response.data['counterSaleLog'] as List;
-        counterSalesList = data
-            .map((customerData) => CounterSaleLogsModel.fromJson(customerData))
-            .toList();
-      } else {
-        showToast("Error: ${response.data['detail']}");
-      }
-    } catch (e) {
-      showToast("Error fetching data: $e");
-    } finally {
-      if (mounted) { // Check if widget is mounted before calling setState
-      }
-    }
-  }
+  // void GetCounterSales(DateTime dateTime) async {
+  //   try {
+  //     if (!mounted) return;
+  //     var params = {
+  //       "date":dateTime,
+  //       "dayWiseLogs":true
+  //     };
+  //     Response response = await apiHelper.fetchData(
+  //         method: 'GET',
+  //         endpoint: 'Customer/GetCounterSales',
+  //         params: params
+  //     );
+  //     if (response.statusCode == 200) {
+  //       counterSaleCount = response.data['totalCounterSales'];
+  //       var data = response.data['counterSaleLog'] as List;
+  //       counterSalesList = data
+  //           .map((customerData) => CounterSaleLogsModel.fromJson(customerData))
+  //           .toList();
+  //     } else {
+  //       showToast("Error: ${response.data['detail']}");
+  //     }
+  //   } catch (e) {
+  //     showToast("Error fetching data: $e");
+  //   } finally {
+  //     if (mounted) { // Check if widget is mounted before calling setState
+  //     }
+  //   }
+  // }
 
-  void GetBusinessInfo() async {
+  void GetAnalytics() async {
     if (!mounted) return;
+    setState(() {
+      loader = true;
+    });
     try {
       var params = {
-        "day":widget.day,
-        "month":widget.month,
-        "year":widget.year
+        "date":widget.date,
+        "userId":0
       };
       Response response = await apiHelper.fetchData(
         method: 'GET',
@@ -96,7 +96,9 @@ class _AnalyticsState extends State<Analytics> {
         showToast("Error: ${response.data['detail']}");
       }
     } catch (e) {
-      showToast("Error fetching data: $e");
+    }
+    finally{
+      loader = false;
     }
   }
 
@@ -114,13 +116,13 @@ class _AnalyticsState extends State<Analytics> {
         appBar: AppBar(
           title: Text('Analytics'),
         ),
-        body: Container(
+        body: loader ? Center( child: CircularProgressIndicator(), ) : Container(
           padding: EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Date: ${widget.month}/${widget.day}/${DateTime.now().year}',
+                'Date: ${widget.date.month}/${widget.date.day}/${widget.date.year}',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 20),
@@ -137,7 +139,7 @@ class _AnalyticsState extends State<Analytics> {
                         context,
                         MaterialPageRoute(
                           builder: (context) =>
-                              CounterSaleLogs(dayWiseLogs: true, dateTime: DateTime(widget.year,widget.month,widget.day,DateTime.now().hour),),
+                              CounterSaleLogs(dayWiseLogs: true, dateTime: widget.date,),
                         ),
                       );
                      },
@@ -157,7 +159,7 @@ class _AnalyticsState extends State<Analytics> {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => ExpenseLogsPage(day: widget.day, month: widget.month, year: widget.year,)), // Replace CalendarWidget with your actual calendar widget
+                        MaterialPageRoute(builder: (context) => ExpenseLogsPage(date: widget.date,)), // Replace CalendarWidget with your actual calendar widget
                       );
                       // Handle view expenses details
                     },
@@ -177,7 +179,7 @@ class _AnalyticsState extends State<Analytics> {
                     onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => CustomerLogsDayWise(day: widget.day, month: widget.month, year: widget.year,)), // Replace CalendarWidget with your actual calendar widget
+                      MaterialPageRoute(builder: (context) => CustomerLogsDayWise(date: widget.date)), // Replace CalendarWidget with your actual calendar widget
                     );
                     },
                     child: Text('View Details'),

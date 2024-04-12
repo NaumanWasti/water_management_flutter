@@ -67,7 +67,6 @@ class _CounterSalesState extends State<CounterSales> {
         showToast("Error: ${response.data['detail']}");
       }
     } catch (e) {
-      showToast("Error fetching data: $e");
     } finally {
       setState(() {
         _loading = false;
@@ -106,7 +105,6 @@ class _CounterSalesState extends State<CounterSales> {
         showToast("Error: ${response.data['detail']}");
       }
     } catch (e) {
-      showToast("Error fetching data: $e");
     } finally {
       if (mounted) { // Check if widget is mounted before calling setState
         setState(() {

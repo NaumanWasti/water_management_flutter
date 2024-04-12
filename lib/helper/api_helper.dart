@@ -44,8 +44,9 @@ class ApiHelper {
       }
 
       return response;
-    } catch (e) {
-      print(e);
+    } on DioException catch (e) {
+      showToast(e.response!.data["title"]);
+      print(e.response!.data["title"]);
       throw Exception("Error fetching data: $e");
     }
   }

@@ -71,7 +71,6 @@ class _MyMainPageState extends State<Customers> {
         showToast("Error: ${response.data['detail']}");
       }
     } catch (e) {
-      showToast("Error fetching data: $e");
     }
   }
 

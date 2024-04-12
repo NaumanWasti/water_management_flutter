@@ -117,8 +117,11 @@ class _LoginScreenState extends State<LoginScreen> {
       Options options = Options(
         headers: headers,
       );
-      Response response = await dio.post(options : options, '${Globals.base_url}/User/Login', data: body);
-
+      var response = await dio.post(
+        '${Globals.base_url}/User/Login',
+        data: body,
+        options: options,
+      );
       // Handle response
       if (response.statusCode == 200) {
         SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -140,9 +143,9 @@ class _LoginScreenState extends State<LoginScreen> {
         showToast("Error: ${response.data['detail']}");
         print('Request failed with status: ${response.statusCode}');
       }
-    } catch (e) {
-      showToast("Error fetching data: $e");
-      print('Error fetching data: $e');
+    } on DioException catch (e) {
+      showToast(e.response!.data["title"]);
+      print(e.response!.data["title"]);
     } finally {
       setState(() {
         _loading = false;

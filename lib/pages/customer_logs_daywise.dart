@@ -9,10 +9,8 @@ import '../db_model/customer_logs_response.dart';
 import '../helper/api_helper.dart';
 
 class CustomerLogsDayWise extends StatefulWidget {
-  final int day;
-  final int month;
-  final int year;
-  const CustomerLogsDayWise({Key? key, required this.day, required this.month, required this.year}) : super(key: key);
+  final DateTime date;
+  const CustomerLogsDayWise({Key? key, required this.date}) : super(key: key);
 
   @override
   State<CustomerLogsDayWise> createState() => _CustomerLogsDayWiseState();
@@ -41,6 +39,8 @@ class _CustomerLogsDayWiseState extends State<CustomerLogsDayWise> {
         itemCount: customerLogs.length,
         itemBuilder: (context, index) {
           final log = customerLogs[index];
+          var date = DateTime.parse(log.deliveryDateTime);
+          date  = date.add(Duration(hours: 5));
           return Card(
             child: ListTile(
               title: Text('Water given: ${log.waterBottlesGiven}'),
@@ -49,7 +49,7 @@ class _CustomerLogsDayWiseState extends State<CustomerLogsDayWise> {
                 children: [
                   Text('Bottles Back: ${log.bottleBack}'),
                   Text('Amount Paid: ${log.amountPaid}'),
-                  Text('Delivery Time: ${formatDateTime(log.deliveryDateTime)}'),
+                  Text('Delivery Time: ${formatDateTime(date.toString())}'),
                 ],
               ),
               tileColor: log.deliveryDay == 'Urgent' ? Colors.redAccent : Colors.white,
@@ -70,11 +70,9 @@ class _CustomerLogsDayWiseState extends State<CustomerLogsDayWise> {
       setState(() {
         _loading = true;
       });
-
       var params = {
-        "day":widget.day,
-        "month":widget.month,
-        "year":widget.year
+        "date":widget.date,
+        "userId" : 0
       };
       Response response = await apiHelper.fetchData(
         method: 'GET',
@@ -91,7 +89,6 @@ class _CustomerLogsDayWiseState extends State<CustomerLogsDayWise> {
         showToast("Error: ${response.data['detail']}");
       }
     } catch (e) {
-      showToast("Error fetching data: $e");
     } finally {
       setState(() {
         _loading = false;

@@ -25,7 +25,8 @@ class SocketService {
       this.groupByString = ""});
 
   Future<HubConnection?> initSocket() async {
-    String url = '$base_url/$hubName';
+    // String url = '$base_url/$hubName';
+    String url = '';
 
     _connection = HubConnectionBuilder()
         .withUrl(url,

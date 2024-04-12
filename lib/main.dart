@@ -38,7 +38,7 @@ void main() async {
   });
   await remoteConfig.fetchAndActivate();
 
-  // Update the global variables with Remote Config values
+  // Globals.base_url = 'https://10.0.2.2:7133/api';
   Globals.base_url = remoteConfig.getString('base_url');
   Globals.username = remoteConfig.getString('username');
   Globals.password = remoteConfig.getString('password');

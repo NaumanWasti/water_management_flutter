@@ -325,7 +325,6 @@ bool _loading=false;
         showToast("Error: ${response.data['detail']}");
       }
     } catch (e) {
-      showToast("Error fetching data: $e");
     } finally {
       setState(() {
         _loading = false;

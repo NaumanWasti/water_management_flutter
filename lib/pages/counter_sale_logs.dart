@@ -43,19 +43,25 @@ ApiHelper apiHelper = new ApiHelper();
           : SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: SingleChildScrollView(
+          
           child: Column(
+            
             children: [
+              
               DataTable(
+                
                 columnSpacing: 120,
                 columns: [
                   DataColumn(label: Text('Water Rate')),
                   DataColumn(label: Text('Sale Date Time')),
                 ],
                 rows: counterSalesList.map((log) {
+                  var saleDateTime = DateTime.parse(log.saleDateTime);
+                  saleDateTime = saleDateTime.add(Duration(hours: 5));
                   return DataRow(
                     cells: [
                       DataCell(Text(log.bottleRate.toString())),
-                      DataCell(Text(formatDateTime(log.saleDateTime))),
+                      DataCell(Text(formatDateTime(saleDateTime.toString()))),
                     ],
                   );
                 }).toList(),
@@ -98,7 +104,6 @@ ApiHelper apiHelper = new ApiHelper();
         showToast("Error: ${response.data['detail']}");
       }
     } catch (e) {
-      showToast("Error fetching data: $e");
     } finally {
       if (mounted) { // Check if widget is mounted before calling setState
         setState(() {
@@ -147,12 +152,7 @@ ApiHelper apiHelper = new ApiHelper();
   }
 
   String formatDateTime(String dateTimeString) {
-    // Define the format string that matches the format \of dateTimeString
-    String format = 'M/d/yyyy h:mm:ss a';
-
-    // Parse the string into a DateTime object using the custom format
-    DateTime dateTime = DateFormat(format).parse(dateTimeString);
-
-    // Format the adjusted DateTime into a simpler format
+    DateTime dateTime = DateTime.parse(dateTimeString);
     return DateFormat('yyyy-MM-dd hh:mm:ss a').format(dateTime);
-  }}
+  }
+}
