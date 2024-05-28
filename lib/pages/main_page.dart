@@ -1,7 +1,10 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:water_managment_system/helper/api_helper.dart';
 import 'package:water_managment_system/pages/expenses.dart';
 import 'package:water_managment_system/pages/profile.dart';
 
+import '../db_model/constants.dart';
 import 'counter_sales.dart';
 import 'customers.dart';
 import 'deliveries.dart';
@@ -17,7 +20,8 @@ class MainPage extends StatefulWidget {
 
 class _MyMainPageState extends State<MainPage> {
   late int _selectedTab;
-
+ApiHelper apiHelper = new ApiHelper();
+Dio dio = new Dio();
   List<Widget> _pages = [
     Center(
       child: Customers(),
@@ -39,7 +43,34 @@ class _MyMainPageState extends State<MainPage> {
   @override
   void initState() {
     super.initState();
+    updateDeliveryCompletedRejectedCheck();
     _selectedTab = widget.initialTabIndex;
+  }
+  void updateDeliveryCompletedRejectedCheck() async {
+    try {
+      var date = DateTime.now();
+      print(date);
+      var params = {
+        "date": date,
+      };
+      Map<String, String> headers = {
+        'authorization': basicAuth,
+      };
+      Options options = Options(
+        headers: headers,
+      );
+      var response = await dio.post(
+        '${Globals.base_url}/Customer/UpdateCompletedRejected',
+        options: options,
+        queryParameters: params
+      );
+      if (response.statusCode == 200) {
+        print("response");
+        print(response.data['message'].toString());
+      } else {
+      }
+    } catch (e) {
+    }
   }
 
   void _changeTab(int index) {

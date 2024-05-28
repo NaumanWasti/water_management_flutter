@@ -44,9 +44,13 @@ class _ProfileState extends State<Profile> {
       loader = true;
     });
       try {
+        var params = {
+          "userId":0
+        };
         Response response = await apiHelper.fetchData(
           method: 'GET',
           endpoint: 'Customer/GetBusinessInfo',
+          params: params
         );
 
         if (response.statusCode == 200) {
@@ -61,7 +65,9 @@ class _ProfileState extends State<Profile> {
       } catch (e) {
       }
       finally {
-        loader = false;
+        setState(() {
+          loader = false;
+        });
       }
     }
 

@@ -20,7 +20,6 @@ class Customers extends StatefulWidget {
 class _MyMainPageState extends State<Customers> {
   late List<Customer> customers = []; // Provide an initial empty list
   bool _loading = false; // Track whether data is being loaded
-  Dio dio = Dio();
   int pageSize = 5;
   int page = 1;
   int totalCustomers = 0;
@@ -32,6 +31,7 @@ class _MyMainPageState extends State<Customers> {
   @override
   void initState() {
     super.initState();
+
     fetchCustomerData("");
     //_scrollController.addListener(_scrollListener);
   }
@@ -45,6 +45,9 @@ class _MyMainPageState extends State<Customers> {
 
   void fetchCustomerData(String search) async {
     try {
+      setState(() {
+        _loading = true;
+      });
       var params = {
         "search": search,
         "page": page,
@@ -71,6 +74,12 @@ class _MyMainPageState extends State<Customers> {
         showToast("Error: ${response.data['detail']}");
       }
     } catch (e) {
+      showToast("Error: $e");
+    }
+    finally{
+      setState(() {
+        _loading = false;
+      });
     }
   }
 
@@ -122,9 +131,7 @@ class _MyMainPageState extends State<Customers> {
             fontSize: width * 0.07),
         )
       )),
-      body: _loading
-          ? Center(child: CircularProgressIndicator()) // Show loader if loading
-          : SingleChildScrollView(
+      body:  SingleChildScrollView(
             child: SafeArea(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,11 +146,16 @@ class _MyMainPageState extends State<Customers> {
                     },
 
                   ),
-                  customers.length!=0 ?
-                  Container(
+
+                  SizedBox(
                     height: height * 0.8,
                     width: width,
-                    child: Column(
+                    child:
+                    _loading
+                        ? Center(child: CircularProgressIndicator()) // Show loader if loading
+                        :
+                        customers.length!=0 ?
+                    Column(
                       children: [
                         Expanded(
                           child: ListView.builder(
@@ -212,11 +224,8 @@ class _MyMainPageState extends State<Customers> {
                         buildPaginationNumbers(totalCustomers, pageSize),
                         const SizedBox(height: kBottomNavigationBarHeight-5),
                       ],
-                    ),
-                  ) : Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Center(child: Text("No resgitered customer found"),),
-                  ),
+                    ) : Center(child: Text("No registered customer found"),),
+                  ) ,
                 ],
               ),
             ),

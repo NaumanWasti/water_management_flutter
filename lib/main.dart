@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:water_managment_system/pages/main_page.dart';
 import 'dart:io';
 
 import 'db_model/constants.dart';
+import 'helper/api_helper.dart';
 
 
 class MyHttpOverrides extends HttpOverrides{
@@ -16,6 +18,7 @@ class MyHttpOverrides extends HttpOverrides{
       ..badCertificateCallback = (X509Certificate cert, String host, int port)=> true;
   }
 }
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   HttpOverrides.global = MyHttpOverrides();
@@ -46,7 +49,6 @@ void main() async {
   // FirebaseFirestore.instance.settings = const Settings(
   //   persistenceEnabled: true,
   // );
-
   runApp(MyApp(initialRoute: initialRoute));
 }
 
