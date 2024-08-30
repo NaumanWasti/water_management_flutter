@@ -1,5 +1,9 @@
 import 'dart:convert';
 
+import 'package:api_cache_manager/api_cache_manager.dart';
+import 'package:api_cache_manager/models/cache_db_model.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:data_cache_manager/data_cache_manager.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,6 +28,7 @@ class _MyMainPageState extends State<Customers> {
   int page = 1;
   int totalCustomers = 0;
   ApiHelper apiHelper = ApiHelper();
+  final DataCacheManager manager = DefaultDataCacheManager.instance;
 
   final TextEditingController searchController = TextEditingController();
   //final ScrollController _scrollController = ScrollController();
@@ -32,46 +37,54 @@ class _MyMainPageState extends State<Customers> {
   void initState() {
     super.initState();
 
-    fetchCustomerData("");
-    //_scrollController.addListener(_scrollListener);
+    fetchCustomerList("");
   }
-  // void _scrollListener() {
-  //   if (_scrollController.position.pixels ==
-  //       _scrollController.position.maxScrollExtent) {
-  //     page++; // Increment page number when scrolled to the bottom
-  //     fetchCustomerData(searchController.text, page, pageSize);
-  //   }
-  // }
 
-  void fetchCustomerData(String search) async {
+
+
+  void fetchCustomerList(String search) async {
+    final List<ConnectivityResult> connectivityResult = await (Connectivity().checkConnectivity());
     try {
-      setState(() {
-        _loading = true;
-      });
-      var params = {
-        "search": search,
-        "page": page,
-        "pageSize": pageSize,
-      };
-      Response response = await apiHelper.fetchData(
-        method: 'GET',
-        endpoint: 'Customer/GetAllCustomer',
-        params: params,
-      );
-      // Handle response
-      if (response.statusCode == 200) {
-        if(mounted){
-          totalCustomers = response.data['totalCustomer'];
-          var data = response.data['customerDetail'] as List;
-          customers = data
-              .map((customerData) => Customer.fromMap(customerData))
+      if((connectivityResult.contains(ConnectivityResult.mobile) || connectivityResult.contains(ConnectivityResult.wifi))){
+        //internet available
+        setState(() {
+          _loading = true;
+        });
+        var params = {
+          "search": search,
+          "page": page,
+          "pageSize": pageSize,
+        };
+        Response response = await apiHelper.fetchData(
+          method: 'GET',
+          endpoint: 'Customer/GetAllCustomer',
+          params: params,
+        );
+        if (response.statusCode == 200) {
+          await manager.add("GetAllCustomer", response.data);
+          if(mounted){
+            totalCustomers = response.data['totalCustomer'];
+            var data = response.data['customerDetail'] as List;
+            customers = data
+                .map((customerData) => Customer.fromMap(customerData))
+                .toList();
+          }
+        } else {
+          showToast("Error: ${response.data['detail']}");
+        }
+      }
+      else{
+        showToast("no internet available");
+        final cacheData = await manager.get("GetAllCustomer");
+        if(cacheData!=null){
+          var cachedDataMap = cacheData.value as Map<String, dynamic>;
+          totalCustomers = cachedDataMap['totalCustomer'];
+          var dataCache = cachedDataMap['customerDetail'] as List;
+          customers = dataCache
+              .map((customerData) => Customer.fromMap(customerData as Map<String, dynamic>))
               .toList();
-          setState(() {
-          });
         }
 
-      } else {
-        showToast("Error: ${response.data['detail']}");
       }
     } catch (e) {
       showToast("Error: $e");
@@ -82,6 +95,8 @@ class _MyMainPageState extends State<Customers> {
       });
     }
   }
+
+
 
   Widget buildPaginationNumbers(int totalCustomers, int pageSize) {
     int totalPages = (totalCustomers / pageSize).ceil();
@@ -95,7 +110,7 @@ class _MyMainPageState extends State<Customers> {
           return GestureDetector(
             onTap: () {
               page = pageNumber;
-              fetchCustomerData(searchController.text);
+              fetchCustomerList(searchController.text);
             },
             child: Container(
               margin: EdgeInsets.symmetric(horizontal: 5),
@@ -142,7 +157,7 @@ class _MyMainPageState extends State<Customers> {
                     decoration: InputDecoration(hintText: 'Search customer',contentPadding: EdgeInsets.all(10)),
                     onChanged: (query) {
                       page = 1;
-                      fetchCustomerData(query);
+                      fetchCustomerList(query);
                     },
 
                   ),
@@ -221,7 +236,8 @@ class _MyMainPageState extends State<Customers> {
                             },
                           ),
                         ),
-                        buildPaginationNumbers(totalCustomers, pageSize),
+                        totalCustomers > pageSize ?
+                        buildPaginationNumbers(totalCustomers, pageSize) : Container(),
                         const SizedBox(height: kBottomNavigationBarHeight-5),
                       ],
                     ) : Center(child: Text("No registered customer found"),),

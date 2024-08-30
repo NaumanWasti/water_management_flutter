@@ -1,3 +1,5 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:data_cache_manager/data_cache_manager.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +22,7 @@ class _CustomerLogsDayWiseState extends State<CustomerLogsDayWise> {
   List<CustomerLogsResponse> customerLogs = [];
   bool _loading = false;
   ApiHelper apiHelper = ApiHelper();
+  final DataCacheManager manager = DefaultDataCacheManager.instance;
 
   @override
   void initState() {
@@ -40,7 +43,6 @@ class _CustomerLogsDayWiseState extends State<CustomerLogsDayWise> {
         itemBuilder: (context, index) {
           final log = customerLogs[index];
           var date = DateTime.parse(log.deliveryDateTime);
-          date  = date.add(Duration(hours: 5));
           return Card(
             child: ListTile(
               title: Text('Water given: ${log.waterBottlesGiven}'),
@@ -67,26 +69,44 @@ class _CustomerLogsDayWiseState extends State<CustomerLogsDayWise> {
 
   void fetchCustomerLogs() async {
     try {
-      setState(() {
-        _loading = true;
-      });
-      var params = {
-        "date":widget.date,
-        "userId" : 0
-      };
-      Response response = await apiHelper.fetchData(
-        method: 'GET',
-        endpoint: 'Customer/GetDayWiseLogs',
-        params: params,
-      );
+      final List<ConnectivityResult> connectivityResult =
+      await (Connectivity().checkConnectivity());
 
-      if (response.statusCode == 200) {
-        var data = response.data as List;
-        customerLogs = data.map((doc) {
-          return CustomerLogsResponse.fromMap(doc);
-        }).toList();
-      } else {
-        showToast("Error: ${response.data['detail']}");
+      if ((connectivityResult.contains(ConnectivityResult.mobile) ||
+          connectivityResult.contains(ConnectivityResult.wifi))) {
+        setState(() {
+          _loading = true;
+        });
+        var params = {
+          "date":widget.date,
+          "userId" : 0
+        };
+        Response response = await apiHelper.fetchData(
+          method: 'GET',
+          endpoint: 'Customer/GetDayWiseLogs',
+          params: params,
+        );
+
+        if (response.statusCode == 200) {
+          await manager.add("GetDayWiseLogs", response.data);
+
+          var data = response.data as List;
+          customerLogs = data.map((doc) {
+            return CustomerLogsResponse.fromMap(doc);
+          }).toList();
+        } else {
+          showToast("Error: ${response.data['detail']}");
+        }
+
+      }
+      else{
+        final cacheData = await manager.get("GetDayWiseLogs");
+        if (cacheData != null) {
+          var cachedDataList = cacheData.value as List<dynamic>;
+          customerLogs = cachedDataList
+              .map((item) => CustomerLogsResponse.fromMap(item as Map<String, dynamic>))
+              .toList();
+        }
       }
     } catch (e) {
     } finally {

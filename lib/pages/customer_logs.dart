@@ -36,12 +36,11 @@ class _CustomerLogsState extends State<CustomerLogs> {
       ),
       body: _loading
           ? Center(child: CircularProgressIndicator())
-          : ListView.builder(
+          : customerLogs.isNotEmpty ?   ListView.builder(
         itemCount: customerLogs.length,
         itemBuilder: (context, index) {
           final log = customerLogs[index];
           var date = DateTime.parse(log.deliveryDateTime);
-          date  = date.add(Duration(hours: 5));
           return Card(
             child: ListTile(
 
@@ -59,7 +58,7 @@ class _CustomerLogsState extends State<CustomerLogs> {
             ),
           );
         },
-      ),
+      ) : Center(child: Text("No logs found"),),
     );
   }
 

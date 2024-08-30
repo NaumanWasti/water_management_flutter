@@ -1,3 +1,5 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:data_cache_manager/data_cache_manager.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +21,8 @@ class _ExpensePageState extends State<ExpensePage> {
   late List<ExpenseModel> getExpenseResponse=[];
   bool _loading = false;
   ApiHelper apiHelper = ApiHelper();
+  final DataCacheManager manager = DefaultDataCacheManager.instance;
+
   final TextEditingController searchController = TextEditingController();
   SortingOption _selectedSortingOption = SortingOption.none; // Track the selected sorting option
   @override
@@ -233,7 +237,6 @@ class _ExpensePageState extends State<ExpensePage> {
   }
   void _showFullDescription(ExpenseModel expense) {
     var date = DateTime.parse(expense.ExpenseDate);
-    date  = date.add(Duration(hours: 5));
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -368,6 +371,8 @@ class _ExpensePageState extends State<ExpensePage> {
   }
   void fetchExpenses(String search,SortingOption sortingOption) async {
     try {
+      final List<ConnectivityResult> connectivityResult =
+      await (Connectivity().checkConnectivity());
       if (!mounted) return;
 
       var params = {
@@ -375,27 +380,44 @@ class _ExpensePageState extends State<ExpensePage> {
         "sortAscending": sortingOption == SortingOption.asc ? true : false,
         "sortDescending": sortingOption == SortingOption.desc ? true : false,
       };
-      Response response = await apiHelper.fetchData(
-          method: 'GET',
-          endpoint: 'Customer/GetExpense',
-          params: params
-      );
 
-      // Handle response
-      if (response.statusCode == 200) {
-        var data  = response.data as List;
-        getExpenseResponse = data
-            .map((customerData) => ExpenseModel.fromMap(customerData))
-            .toList();
-        if(mounted){
-          setState(() {});
+      if ((connectivityResult.contains(ConnectivityResult.mobile) ||
+          connectivityResult.contains(ConnectivityResult.wifi))) {
+        Response response = await apiHelper.fetchData(
+            method: 'GET',
+            endpoint: 'Customer/GetExpense',
+            params: params
+        );
+        // Handle response
+        if (response.statusCode == 200) {
+          await manager.add("GetExpense", response.data);
+
+          var data  = response.data as List;
+          getExpenseResponse = data
+              .map((customerData) => ExpenseModel.fromMap(customerData))
+              .toList();
+        } else {
+          showToast("Error: ${response.data['detail']}");
         }
-      } else {
-        showToast("Error: ${response.data['detail']}");
       }
+      else{
+        final cacheData = await manager.get("GetExpense");
+        if(cacheData!=null) {
+          var data  = cacheData.value as List;
+          getExpenseResponse = data
+              .map((customerData) => ExpenseModel.fromMap(customerData))
+              .toList();
+        }
+      }
+
     }
     catch (e){
       print(e);
+    }
+    finally{
+      setState(() {
+
+      });
     }
 
   }

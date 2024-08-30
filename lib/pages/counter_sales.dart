@@ -1,3 +1,5 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:data_cache_manager/data_cache_manager.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -30,6 +32,8 @@ class _CounterSalesState extends State<CounterSales> {
   ];
   late TextEditingController bottleRateController;
   ApiHelper apiHelper = ApiHelper();
+  final DataCacheManager manager = DefaultDataCacheManager.instance;
+
 
   @override
   void initState() {
@@ -75,35 +79,59 @@ class _CounterSalesState extends State<CounterSales> {
   }
 
   void GetCounterSales(DateTime dateTime) async {
+    final List<ConnectivityResult> connectivityResult =
+    await (Connectivity().checkConnectivity());
     try {
       if (!mounted) return;
-      setState(() {
-        _loading = true;
-      });
 
-      var params = {
-        "date":dateTime,
-        "page":page,
-        "pageSize":pageSize,
-      };
-      Response response = await apiHelper.fetchData(
-        method: 'GET',
-        endpoint: 'Customer/GetCounterSales',
-        params: params,
-      );
-      if (response.statusCode == 200) {
-        counterSaleCount = response.data['totalCounterSales'];
-        var data = response.data['counterSaleLog'] as List;
-        counterSalesList = data
-            .map((customerData) => CounterSaleLogsModel.fromJson(customerData))
-            .toList();
-        var length = counterSalesList.length;
-        if(length>0){
-          bottleRateController.text = counterSalesList[length-1].bottleRate.toString();
+      if ((connectivityResult.contains(ConnectivityResult.mobile) ||
+          connectivityResult.contains(ConnectivityResult.wifi))) {
+        setState(() {
+          _loading = true;
+        });
+
+        var params = {
+          "date":dateTime,
+          "page":page,
+          "pageSize":pageSize,
+        };
+        Response response = await apiHelper.fetchData(
+          method: 'GET',
+          endpoint: 'Customer/GetCounterSales',
+          params: params,
+        );
+        if (response.statusCode == 200) {
+          await manager.add("GetCounterSales", response.data);
+
+          counterSaleCount = response.data['totalCounterSales'];
+          var data = response.data['counterSaleLog'] as List;
+          counterSalesList = data
+              .map((customerData) => CounterSaleLogsModel.fromJson(customerData))
+              .toList();
+          var length = counterSalesList.length;
+          if(length>0){
+            bottleRateController.text = counterSalesList[length-1].bottleRate.toString();
+          }
+        } else {
+          showToast("Error: ${response.data['detail']}");
         }
-      } else {
-        showToast("Error: ${response.data['detail']}");
       }
+      else{
+        final cacheData = await manager.get("GetCounterSales");
+        if(cacheData!=null) {
+          var cachedDataMap = cacheData.value as Map<String, dynamic>;
+          counterSaleCount = cachedDataMap['totalCounterSales'];
+          var data = cachedDataMap['counterSaleLog'] as List;
+          counterSalesList = data
+              .map((customerData) => CounterSaleLogsModel.fromJson(customerData))
+              .toList();
+          var length = counterSalesList.length;
+          if(length>0){
+            bottleRateController.text = counterSalesList[length-1].bottleRate.toString();
+          }
+        }
+      }
+
     } catch (e) {
     } finally {
       if (mounted) { // Check if widget is mounted before calling setState
@@ -239,5 +267,7 @@ class _CounterSalesState extends State<CounterSales> {
     final numericRegex = RegExp(r'^[0-9]+$');
     return numericRegex.hasMatch(value);
   }
+
+
 }
 

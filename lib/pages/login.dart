@@ -17,8 +17,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   Dio dio = Dio();
-  TextEditingController emailController = TextEditingController(text:"ahsan@gmail.com" );
-  TextEditingController passwordController = TextEditingController(text: "Pakistan123");
+  TextEditingController emailController = TextEditingController( );
+  TextEditingController passwordController = TextEditingController();
   bool _obscureText = true; // Track whether the password is currently obscured or not
   bool _loading = false;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();

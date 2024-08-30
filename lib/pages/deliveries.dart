@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:data_cache_manager/data_cache_manager.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -26,8 +28,7 @@ class Delieveries extends StatefulWidget {
 class _DelieveriesState extends State<Delieveries>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  DateTime now = DateTime.now().toUtc();
-  Duration duration = new Duration(hours: 5);
+  DateTime now = DateTime.now();
   bool deliveryComplete = false;
   bool deliveryReject = false;
   int pageSize = 5;
@@ -56,11 +57,11 @@ class _DelieveriesState extends State<Delieveries>
   bool _loading = false;
   List<Customer> searchResults = [];
   int selectedCustomerId = 0;
+  final DataCacheManager manager = DefaultDataCacheManager.instance;
 
   @override
   void initState() {
     super.initState();
-    now = now.add(duration);
     //_initSocket();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_handleTabSelection);
@@ -68,17 +69,14 @@ class _DelieveriesState extends State<Delieveries>
     GetUpcomingDelivery(selectedDayIndex);
   }
 
-
-
   void _handleTabSelection() {
-    if(mounted){
+    if (mounted) {
       setState(() {
         _tabController.index == 0
             ? GetUpcomingDelivery(selectedDayIndex)
             : GetUpcomingDelivery(8);
       });
     }
-
   }
 
   Widget _buildDeliveryList(List<UpcomingDelivery> delivery) {
@@ -122,7 +120,7 @@ class _DelieveriesState extends State<Delieveries>
                           ),
                         )
                       : Container(
-                    height: height * 0.8,
+                          height: height * 0.8,
                           width: width,
                           child: Column(
                             children: [
@@ -131,7 +129,8 @@ class _DelieveriesState extends State<Delieveries>
                                   itemCount: delivery.length,
                                   itemBuilder: (context, index) {
                                     var deliveryCustomer = delivery[index];
-                                    deliveryComplete = deliveryCustomer.completed;
+                                    deliveryComplete =
+                                        deliveryCustomer.completed;
                                     deliveryReject = deliveryCustomer.rejected;
                                     print(deliveryReject);
                                     print("deliveryReject");
@@ -142,10 +141,12 @@ class _DelieveriesState extends State<Delieveries>
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (context) => CustomerLogs(
+                                              builder: (context) =>
+                                                  CustomerLogs(
                                                 customerId:
                                                     deliveryCustomer.customerId,
-                                                customerName: deliveryCustomer.name,
+                                                customerName:
+                                                    deliveryCustomer.name,
                                               ),
                                             ),
                                           ),
@@ -156,21 +157,26 @@ class _DelieveriesState extends State<Delieveries>
                                               backgroundColor: Colors.blue,
                                               child: Text(
                                                 "${index + 1}",
-                                                style: TextStyle(color: Colors.white),
+                                                style: TextStyle(
+                                                    color: Colors.white),
                                               ),
                                             ),
-                                            title: Text("${deliveryCustomer.name}"),
+                                            title: Text(
+                                                "${deliveryCustomer.name}"),
                                             subtitle: Column(
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
                                               children: [
                                                 Row(
                                                   children: [
-                                                    Text("Phone: ${deliveryCustomer.phone}"),
+                                                    Text(
+                                                        "Phone: ${deliveryCustomer.phone}"),
                                                     SizedBox(width: 5),
                                                     InkWell(
                                                       onTap: () {
-                                                        _launchPhoneApp(deliveryCustomer.phone);
+                                                        _launchPhoneApp(
+                                                            deliveryCustomer
+                                                                .phone);
                                                       },
                                                       child: Icon(Icons.phone),
                                                     ),
@@ -183,23 +189,30 @@ class _DelieveriesState extends State<Delieveries>
                                               ],
                                             ),
                                             trailing: IgnorePointer(
-                                              ignoring: deliveryComplete || deliveryReject ||
+                                              ignoring: deliveryComplete ||
+                                                  deliveryReject ||
                                                   DateTime.now().weekday !=
                                                       selectedDayIndex,
                                               child: IconButton(
                                                 icon: Icon(
                                                   deliveryComplete
-                                                      ? Icons.check_circle : deliveryReject ? Icons.cancel
-                                                      : Icons.pending,
+                                                      ? Icons.check_circle
+                                                      : deliveryReject
+                                                          ? Icons.cancel
+                                                          : Icons.pending,
                                                   color: deliveryComplete
-                                                      ? Colors.green : deliveryReject ? Colors.red
-                                                      : Colors.grey,
+                                                      ? Colors.green
+                                                      : deliveryReject
+                                                          ? Colors.red
+                                                          : Colors.grey,
                                                 ),
                                                 onPressed: () {
                                                   showDialog(
                                                     context: context,
-                                                    builder: (BuildContext context) {
-                                                      return completeDialog(index);
+                                                    builder:
+                                                        (BuildContext context) {
+                                                      return completeDialog(
+                                                          index);
                                                     },
                                                   );
                                                 },
@@ -212,9 +225,9 @@ class _DelieveriesState extends State<Delieveries>
                                   },
                                 ),
                               ),
-                              buildPaginationNumbers(totalDelivery, pageSize),
-                               SizedBox(
-                                   height: kBottomNavigationBarHeight+50),
+                              totalDelivery > pageSize ?
+                              buildPaginationNumbers(totalDelivery, pageSize) : Container(),
+                              SizedBox(height: kBottomNavigationBarHeight + 50),
                             ],
                           ),
                         ),
@@ -223,12 +236,13 @@ class _DelieveriesState extends State<Delieveries>
             ),
           );
   }
+
   void _launchPhoneApp(String phoneNumber) async {
     final Uri phoneUri = Uri(
       scheme: 'tel',
       path: phoneNumber,
     );
-      await launchUrl(phoneUri);
+    await launchUrl(phoneUri);
   }
 
   Widget _buildDeliveryTab() {
@@ -241,10 +255,13 @@ class _DelieveriesState extends State<Delieveries>
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: Center(child: Text('Deliveries',style: TextStyle(
-            color: Colors.lightBlue,
-            fontWeight: FontWeight.bold,
-            fontSize: width * 0.07),
+        title: Center(
+            child: Text(
+          'Deliveries',
+          style: TextStyle(
+              color: Colors.lightBlue,
+              fontWeight: FontWeight.bold,
+              fontSize: width * 0.07),
         )),
         bottom: TabBar(
           controller: _tabController,
@@ -363,7 +380,6 @@ class _DelieveriesState extends State<Delieveries>
           },
           child: Text('Complete'),
         ),
-
       ],
     );
   }
@@ -387,19 +403,17 @@ class _DelieveriesState extends State<Delieveries>
       if (response.statusCode == 200) {
         print(response);
         var data = response.data['customerDetail'] as List;
-if(mounted){
-  _setState(() {
-    searchResults = data
-        .map((customerData) => Customer.fromMap(customerData))
-        .toList();
-  });
-}
-
+        if (mounted) {
+          _setState(() {
+            searchResults = data
+                .map((customerData) => Customer.fromMap(customerData))
+                .toList();
+          });
+        }
       } else {
         showToast("Error: ${response.data['detail']}");
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   void addUrgentDelivery(int customerId) async {
@@ -431,7 +445,8 @@ if(mounted){
       title: Text('Urgent Delivery'),
       content: StatefulBuilder(
         builder: (BuildContext context, StateSetter setState) {
-          _setState = setState; // Renamed _setState to _setStateCallback for clarity
+          _setState =
+              setState; // Renamed _setState to _setStateCallback for clarity
 
           return SingleChildScrollView(
             child: Column(
@@ -508,7 +523,7 @@ if(mounted){
                 if (selectedCustomerId != 0) {
                   addUrgentDelivery(selectedCustomerId);
                 } else {
-                showToast("please try again");
+                  showToast("please try again");
                 }
                 Navigator.pop(context); // Close the dialog
               },
@@ -573,40 +588,64 @@ if(mounted){
   }
 
   void GetUpcomingDelivery(int day) async {
-    if(mounted){
-      try {
-        setState(() {
-          _loading = true;
-        });
-        var params = {
-          "weekDaysEnum": day,
-          "page": page,
-          "pageSize": pageSize,
-        };
-        Response response = await apiHelper.fetchData(
-          method: 'GET',
-          endpoint: 'Customer/GetCustomersByWeekDay',
-          params: params,
-        );
-        // Handle response
-        if (response.statusCode == 200) {
-          totalDelivery = response.data['totalDelivery'];
-          var data = response.data['customerByDeliveryDay'] as List;
-          delivery = data.map((doc) {
-            return UpcomingDelivery.fromMap(doc);
-          }).toList();
-        } else {
-          showToast("Error: ${response.data['detail']}");
+    final List<ConnectivityResult> connectivityResult =
+        await (Connectivity().checkConnectivity());
+    var params = {
+      "weekDaysEnum": day,
+      "page": page,
+      "pageSize": pageSize,
+    };
+
+    if ((connectivityResult.contains(ConnectivityResult.mobile) ||
+        connectivityResult.contains(ConnectivityResult.wifi))) {
+      if (mounted) {
+        try {
+          setState(() {
+            _loading = true;
+          });
+
+          Response response = await apiHelper.fetchData(
+            method: 'GET',
+            endpoint: 'Customer/GetCustomersByWeekDay',
+            params: params,
+          );
+          // Handle response
+          if (response.statusCode == 200) {
+            await manager.add("GetCustomersByWeekDay${day}", response.data);
+            totalDelivery = response.data['totalDelivery'];
+            var data = response.data['customerByDeliveryDay'] as List;
+            delivery = data.map((doc) {
+              return UpcomingDelivery.fromMap(doc);
+            }).toList();
+          } else {
+            showToast("Error: ${response.data['detail']}");
+          }
+        } catch (e) {
+        } finally {
+          setState(() {
+            _loading = false;
+          });
         }
-      } catch (e) {
-      } finally {
-        setState(() {
-          _loading = false;
-        });
+      }
+    } else {
+      final cacheData = await manager.get("GetCustomersByWeekDay${day}");
+      if(cacheData!=null) {
+        var cachedDataMap = cacheData.value as Map<String, dynamic>;
+        totalDelivery = cachedDataMap['totalDelivery'];
+        var data = cachedDataMap['customerByDeliveryDay'] as List;
+        delivery = data.map((doc) {
+          return UpcomingDelivery.fromMap(doc);
+        }).toList();
+      }
+      else{
+        delivery.clear();
       }
     }
+    setState(() {
 
+    });
   }
+
   Widget buildPaginationNumbers(int totalCustomers, int pageSize) {
     print(totalCustomers);
     print(pageSize);
@@ -682,21 +721,15 @@ if(mounted){
     }
   }
 
-  void RejectDelivery(
-      int deliveryId) async {
+  void RejectDelivery(int deliveryId) async {
     try {
       setState(() {
         _loading = true;
       });
-      var params = {
-        "deliveryId": deliveryId
-      };
+      var params = {"deliveryId": deliveryId};
 
       Response response = await apiHelper.fetchData(
-        method: 'POST',
-        endpoint: 'Customer/RejectDelivery',
-        params: params
-      );
+          method: 'POST', endpoint: 'Customer/RejectDelivery', params: params);
 
       if (response.statusCode == 200) {
         _tabController.index == 0
@@ -716,38 +749,34 @@ if(mounted){
     }
   }
 
-  void _initSocket() async {
-    SocketService serviceWaitingListTournament = SocketService(
-        hubName: 'customerList-hub',
-        groupMethodController: "AddToGroup",
-        groupBy: 2);
-    var connectionWaitingListTournament =
-        await serviceWaitingListTournament.initSocket();
-    connectionGetDeviceInfo(
-        connectionWaitingListTournament!);
-  }
-  void connectionGetDeviceInfo(HubConnection connection) {
-    connection.on('GetCustomerListing', (message) {
-      var response = message?[0];
-      response = response['customerByDeliveryDay'];
-      if (response is List<dynamic>) {
-        // Ensure response is a List
-        var list  = response.map((doc) {
-          return UpcomingDelivery.fromMap(Map<String, dynamic>.from(doc));
-          // Convert each dynamic object to an UpcomingDelivery object
-        }).toList();
-        delivery.addAll(list);
-      } else {
-        // Handle unexpected data format
-        print('Unexpected response format: $response');
-      }
-      setState(() {
-
-      });
-    });
-  }
-
-
+  // void _initSocket() async {
+  //   SocketService serviceWaitingListTournament = SocketService(
+  //       hubName: 'customerList-hub',
+  //       groupMethodController: "AddToGroup",
+  //       groupBy: 2);
+  //   var connectionWaitingListTournament =
+  //       await serviceWaitingListTournament.initSocket();
+  //   connectionGetDeviceInfo(
+  //       connectionWaitingListTournament!);
+  // }
+  // void connectionGetDeviceInfo(HubConnection connection) {
+  //   connection.on('GetCustomerListing', (message) {
+  //     var response = message?[0];
+  //     response = response['customerByDeliveryDay'];
+  //     if (response is List<dynamic>) {
+  //       // Ensure response is a List
+  //       var list = response.map((doc) {
+  //         return UpcomingDelivery.fromMap(Map<String, dynamic>.from(doc));
+  //         // Convert each dynamic object to an UpcomingDelivery object
+  //       }).toList();
+  //       delivery.addAll(list);
+  //     } else {
+  //       // Handle unexpected data format
+  //       print('Unexpected response format: $response');
+  //     }
+  //     setState(() {});
+  //   });
+  // }
 }
 
 // Future<List<Customer>> _getCustomers() async {

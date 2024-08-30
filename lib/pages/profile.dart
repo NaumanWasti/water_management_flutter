@@ -1,5 +1,8 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:data_cache_manager/data_cache_manager.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:water_managment_system/db_model/business_info.dart';
@@ -22,6 +25,7 @@ class _ProfileState extends State<Profile> {
   Dio dio = Dio();
   bool loader = false;
   ApiHelper apiHelper = ApiHelper();
+  final DataCacheManager manager = DefaultDataCacheManager.instance;
 
   var date =  DateTime.now();
   BusinessInfo businessInfo = BusinessInfo(
@@ -39,21 +43,28 @@ class _ProfileState extends State<Profile> {
   }
 
   void GetBusinessInfo() async {
-    if (!mounted) return;
-    setState(() {
-      loader = true;
-    });
-      try {
+    final List<ConnectivityResult> connectivityResult =
+    await (Connectivity().checkConnectivity());
+
+    try {
+      if ((connectivityResult.contains(ConnectivityResult.mobile) ||
+          connectivityResult.contains(ConnectivityResult.wifi))) {
+        if (!mounted) return;
+        setState(() {
+          loader = true;
+        });
         var params = {
           "userId":0
         };
         Response response = await apiHelper.fetchData(
-          method: 'GET',
-          endpoint: 'Customer/GetBusinessInfo',
-          params: params
+            method: 'GET',
+            endpoint: 'Customer/GetBusinessInfo',
+            params: params
         );
 
         if (response.statusCode == 200) {
+          await manager.add("GetBusinessInfo", response.data);
+
           businessInfo = BusinessInfo.fromMap(response.data);
           numberOfBottles.text = businessInfo.totalBottle.toString();
           bottleRate.text = businessInfo.bottleRate.toString();
@@ -62,7 +73,20 @@ class _ProfileState extends State<Profile> {
           }        } else {
           showToast("Error: ${response.data['detail']}");
         }
+      }
+      else{
+        final cacheData = await manager.get("GetBusinessInfo");
+        if(cacheData!=null) {
+          var cachedDataMap = cacheData.value as Map<String, dynamic>;
+          businessInfo = BusinessInfo.fromMap(cachedDataMap);
+          numberOfBottles.text = businessInfo.totalBottle.toString();
+          bottleRate.text = businessInfo.bottleRate.toString();
+        }
+      }
       } catch (e) {
+      if (kDebugMode) {
+        print(e);
+      }
       }
       finally {
         setState(() {

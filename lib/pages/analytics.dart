@@ -1,5 +1,8 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:data_cache_manager/data_cache_manager.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:water_managment_system/pages/calender_widget.dart';
@@ -30,7 +33,10 @@ class _AnalyticsState extends State<Analytics> {
   late List<CounterSaleLogsModel> counterSalesList = [];
  // late DateTime selectedMonth = DateTime.now();
   ApiHelper apiHelper = ApiHelper();
-bool loader = false;
+  final DataCacheManager manager = DefaultDataCacheManager.instance;
+
+
+  bool loader = false;
   @override
   void initState() {
     // TODO: implement initState
@@ -70,35 +76,54 @@ bool loader = false;
   // }
 
   void GetAnalytics() async {
+    final List<ConnectivityResult> connectivityResult =
+    await (Connectivity().checkConnectivity());
     if (!mounted) return;
     setState(() {
       loader = true;
     });
     try {
-      var params = {
-        "date":widget.date,
-        "userId":0
-      };
-      Response response = await apiHelper.fetchData(
-        method: 'GET',
-        endpoint: 'Customer/GetAnalytics',
-        params: params
-      );
+        if ((connectivityResult.contains(ConnectivityResult.mobile) ||
+            connectivityResult.contains(ConnectivityResult.wifi))){
+        var params = {
+          "date":widget.date,
+          "userId":0
+        };
+        Response response = await apiHelper.fetchData(
+            method: 'GET',
+            endpoint: 'Customer/GetAnalytics',
+            params: params
+        );
 
-      if (response.statusCode == 200) {
-        totalCounterSales = response.data['totalCounterSale'];
-        totalExpenses = response.data['totalExpense'];
-        totalDeliverySales = response.data['totalDeliverySale'];
-        if(mounted){
-          setState(() {});
+        if (response.statusCode == 200) {
+          await manager.add("GetAnalytics", response.data);
+
+          totalCounterSales = response.data['totalCounterSale'];
+          totalExpenses = response.data['totalExpense'];
+          totalDeliverySales = response.data['totalDeliverySale'];
+
+        } else {
+          showToast("Error: ${response.data['detail']}");
         }
-      } else {
-        showToast("Error: ${response.data['detail']}");
       }
+      else{
+        final cacheData = await manager.get("GetAnalytics");
+        if(cacheData!=null) {
+          var cachedDataMap = cacheData.value as Map<String, dynamic>;
+          totalCounterSales = cachedDataMap['totalCounterSale'];
+          totalExpenses = cachedDataMap['totalExpense'];
+          totalDeliverySales = cachedDataMap['totalDeliverySale'];
+        }
+      }
+
     } catch (e) {
+      if (kDebugMode) {
+        print(e);
+      }
     }
     finally{
       loader = false;
+      setState(() {});
     }
   }
 

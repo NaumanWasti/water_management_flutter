@@ -1,3 +1,5 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:data_cache_manager/data_cache_manager.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -18,13 +20,13 @@ class CounterSaleLogs extends StatefulWidget {
 }
 
 class _CounterSaleLogsState extends State<CounterSaleLogs> {
-  Dio dio = Dio();
   bool _loading = false;
   int pageSize = 10;
   int counterSaleCount = 0;
   int page = 1;
   late List<CounterSaleLogsModel> counterSalesList = [];
 ApiHelper apiHelper = new ApiHelper();
+  final DataCacheManager manager = DefaultDataCacheManager.instance;
 
   @override
   void initState() {
@@ -56,8 +58,8 @@ ApiHelper apiHelper = new ApiHelper();
                   DataColumn(label: Text('Sale Date Time')),
                 ],
                 rows: counterSalesList.map((log) {
+                  print(log.saleDateTime);
                   var saleDateTime = DateTime.parse(log.saleDateTime);
-                  saleDateTime = saleDateTime.add(Duration(hours: 5));
                   return DataRow(
                     cells: [
                       DataCell(Text(log.bottleRate.toString())),
@@ -75,34 +77,53 @@ ApiHelper apiHelper = new ApiHelper();
     );
   }
   void GetCounterSales(DateTime dateTime) async {
+    final List<ConnectivityResult> connectivityResult =
+    await (Connectivity().checkConnectivity());
     try {
       if (!mounted) return;
 
-      setState(() {
-        _loading = true;
-      });
+      if ((connectivityResult.contains(ConnectivityResult.mobile) ||
+          connectivityResult.contains(ConnectivityResult.wifi))){
+        setState(() {
+          _loading = true;
+        });
 
-      var params = {
-        "dayWiseLogs":widget.dayWiseLogs,
-        "date":dateTime,
-        "page":page,
-        "pageSize":pageSize,
-      };
-      Response response = await apiHelper.fetchData(
-        method: 'GET',
-        endpoint: 'Customer/GetCounterSales',
-        params: params,
-      );
+        var params = {
+          "dayWiseLogs":widget.dayWiseLogs,
+          "date":dateTime,
+          "page":page,
+          "pageSize":pageSize,
+        };
+        Response response = await apiHelper.fetchData(
+          method: 'GET',
+          endpoint: 'Customer/GetCounterSales',
+          params: params,
+        );
 
-      if (response.statusCode == 200) {
-        counterSaleCount = response.data['totalCounterSales'];
-        var data = response.data['counterSaleLog'] as List;
-        counterSalesList = data
-            .map((customerData) => CounterSaleLogsModel.fromJson(customerData))
-            .toList();
-      } else {
-        showToast("Error: ${response.data['detail']}");
+        if (response.statusCode == 200) {
+          await manager.add("GetCounterSales", response.data);
+
+          counterSaleCount = response.data['totalCounterSales'];
+          var data = response.data['counterSaleLog'] as List;
+          counterSalesList = data
+              .map((customerData) => CounterSaleLogsModel.fromJson(customerData))
+              .toList();
+        } else {
+          showToast("Error: ${response.data['detail']}");
+        }
       }
+      else{
+        final cacheData = await manager.get("GetCounterSales");
+        if(cacheData!=null) {
+          var cachedDataMap = cacheData.value as Map<String, dynamic>;
+          counterSaleCount = cachedDataMap['totalCounterSales'];
+          var data = cachedDataMap['counterSaleLog'] as List;
+          counterSalesList = data
+              .map((customerData) => CounterSaleLogsModel.fromJson(customerData))
+              .toList();
+        }
+      }
+
     } catch (e) {
     } finally {
       if (mounted) { // Check if widget is mounted before calling setState

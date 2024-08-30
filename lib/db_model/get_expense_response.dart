@@ -2,12 +2,12 @@ class ExpenseModel{
   int Id;
   String ExpenseTitle;
   String ExpenseDate;
-  //String ExpenseDescription ;
+  String ExpenseDescription ;
   int ExpenseAmount;
   ExpenseModel({
     this.Id = 0,
     required this.ExpenseTitle,
-    //required this.ExpenseDescription,
+    this.ExpenseDescription = "",
     required this.ExpenseAmount,
     this.ExpenseDate = '',
   });
@@ -15,7 +15,7 @@ class ExpenseModel{
     return ExpenseModel(
       ExpenseAmount: json['expenseAmount'],
       ExpenseDate: json['expenseDate'],
-      //ExpenseDescription: json['expenseDescription'],
+      ExpenseDescription: json['expenseDescription'],
       ExpenseTitle: json['expenseTitle'],
       Id: json['id'],
     );
