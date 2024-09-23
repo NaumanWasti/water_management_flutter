@@ -118,7 +118,8 @@ class _LoginScreenState extends State<LoginScreen> {
         headers: headers,
       );
       var response = await dio.post(
-        '${Globals.base_url}/User/Login',
+        //'${Globals.base_url}/User/Login',
+        'https://10.0.2.2:7133/api/User/Login',
         data: body,
         options: options,
       );

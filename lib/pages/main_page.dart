@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:water_managment_system/helper/api_helper.dart';
 import 'package:water_managment_system/pages/expenses.dart';
 import 'package:water_managment_system/pages/profile.dart';
@@ -48,10 +49,13 @@ Dio dio = new Dio();
   }
   void updateDeliveryCompletedRejectedCheck() async {
     try {
+      SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+      var userId = sharedPreferences.getInt("id");
       var date = DateTime.now();
       print(date);
       var params = {
         "date": date,
+        "userId":userId
       };
       Map<String, String> headers = {
         'authorization': basicAuth,
@@ -60,7 +64,8 @@ Dio dio = new Dio();
         headers: headers,
       );
       var response = await dio.post(
-        '${Globals.base_url}/Customer/UpdateCompletedRejected',
+       // '${Globals.base_url}/Customer/UpdateCompletedRejected',
+        'https://10.0.2.2:7133/api/Customer/UpdateCompletedRejected',
         options: options,
         queryParameters: params
       );

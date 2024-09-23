@@ -59,11 +59,14 @@ bool _loading=false;
     emailAddressController.dispose();
     bottlePriceController.dispose();
     super.dispose();
-  }
-  bool validateNumeric(String value) {
+  } 
+
+  bool isValueNumeric(String value) {
     final numericRegex = RegExp(r'^[0-9]+$');
-    return numericRegex.hasMatch(value);
+    return  numericRegex.hasMatch(value);
   }
+
+
   @override
   Widget build(BuildContext context) {
 
@@ -145,7 +148,7 @@ bool _loading=false;
                       },
                       keyboardType: TextInputType.number,
                       onChanged: (value) {
-                        if (!validateNumeric(value)) {
+                        if (!isValueNumeric(value)) {
                           // Clear the field if it contains non-numeric characters
                           totalAdvanceController.clear();
                         }
@@ -163,7 +166,7 @@ bool _loading=false;
                       },
                       keyboardType: TextInputType.number,
                       onChanged: (value) {
-                        if (!validateNumeric(value)) {
+                        if (!isValueNumeric(value)) {
                           // Clear the field if it contains non-numeric characters
                           bottlePriceController.clear();
                         }
