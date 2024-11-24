@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../db_model/constants.dart';
 import '../db_model/customer_logs_response.dart';
@@ -11,7 +12,8 @@ import '../helper/api_helper.dart';
 class CustomerLogs extends StatefulWidget {
   final int customerId;
   final String customerName;
-  const CustomerLogs({Key? key, required this.customerId, this.customerName = ''}) : super(key: key);
+  final String phoneNumber;
+  const CustomerLogs({Key? key, required this.customerId,required this.phoneNumber, this.customerName = ''}) : super(key: key);
 
   @override
   State<CustomerLogs> createState() => _CustomerLogsState();
@@ -43,8 +45,24 @@ class _CustomerLogsState extends State<CustomerLogs> {
           var date = DateTime.parse(log.deliveryDateTime);
           return Card(
             child: ListTile(
-
-              trailing: Text(log.deliveryDay),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(log.deliveryDay),
+                  IconButton(
+                    icon: Icon(Icons.share),
+                    onPressed: () {
+                      String logInfo = "Customer: ${widget.customerName}\n"
+                          "Water Given: ${log.waterBottlesGiven}\n"
+                          "Bottles Back: ${log.bottleBack}\n"
+                          "Amount Paid: ${log.amountPaid}\n"
+                          "Delivery Day: ${log.deliveryDay}\n"
+                          "Delivery Time: ${formatDateTime(date.toString())}";
+                      showWhatsAppShareDialog(context, logInfo);
+                    },
+                  ),
+                ],
+              ),
               title: Text('Water given: ${log.waterBottlesGiven}'),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,7 +72,6 @@ class _CustomerLogsState extends State<CustomerLogs> {
                   Text('Delivery Time: ${formatDateTime(date.toString())}'),
                 ],
               ),
-              //tileColor: log.deliveryDay == 'Urgent' ? Colors.redAccent : Colors.white,
             ),
           );
         },
@@ -66,7 +83,50 @@ class _CustomerLogsState extends State<CustomerLogs> {
     DateTime dateTime = DateTime.parse(dateTimeString);
     return DateFormat('yyyy-MM-dd hh:mm:ss a').format(dateTime);
   }
+  void shareOnWhatsApp(String message) async {
+    String phoneNumber = widget.phoneNumber.trim();
+    if (!phoneNumber.startsWith('+')) {
+      if (phoneNumber.startsWith('0')) {
+        phoneNumber = phoneNumber.substring(1);
+      }
+      phoneNumber = '+92$phoneNumber';
+    }
+    // Construct the WhatsApp URL
+    var androidUrl = "whatsapp://send?phone=$phoneNumber&text=${Uri.encodeComponent(message)}";
 
+    try {
+      await launchUrl(Uri.parse(androidUrl));
+    } on Exception {
+      showToast("WhatsApp is not installed");
+    }
+  }
+
+
+
+  void showWhatsAppShareDialog(BuildContext context, String logInfo) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Share on WhatsApp"),
+          content: Text("Do you want to share this information on WhatsApp?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                shareOnWhatsApp(logInfo);
+              },
+              child: Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void fetchCustomerLogs() async {
     try {

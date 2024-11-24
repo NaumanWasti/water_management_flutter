@@ -132,8 +132,6 @@ class _DelieveriesState extends State<Delieveries>
                                     deliveryComplete =
                                         deliveryCustomer.completed;
                                     deliveryReject = deliveryCustomer.rejected;
-                                    print(deliveryReject);
-                                    print("deliveryReject");
                                     return Padding(
                                       padding: const EdgeInsets.all(8.0),
                                       child: InkWell(
@@ -147,6 +145,7 @@ class _DelieveriesState extends State<Delieveries>
                                                     deliveryCustomer.customerId,
                                                 customerName:
                                                     deliveryCustomer.name,
+                                                    phoneNumber: deliveryCustomer.phone,
                                               ),
                                             ),
                                           ),
@@ -207,6 +206,9 @@ class _DelieveriesState extends State<Delieveries>
                                                           : Colors.grey,
                                                 ),
                                                 onPressed: () {
+                                                  waterBottlesController.text = "";
+                                                  amountPaidController.text = "";
+                                                  bottlesBackController.text = "";
                                                   showDialog(
                                                     context: context,
                                                     builder:
@@ -360,7 +362,6 @@ class _DelieveriesState extends State<Delieveries>
         TextButton(
           onPressed: () {
             RejectDelivery(delivery[index].deliveryId);
-            Navigator.pop(context);
           },
           child: Text('Reject'),
         ),
@@ -375,7 +376,6 @@ class _DelieveriesState extends State<Delieveries>
                 AmountPaid: int.parse(amountPaidController.text),
               );
               CompleteDelivery(request, selectedDayIndex);
-              Navigator.pop(context);
             }
           },
           child: Text('Complete'),
@@ -489,11 +489,15 @@ class _DelieveriesState extends State<Delieveries>
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  customer.name,
+                                  customer.name.length > 10
+                                      ? customer.name.substring(0, 10) + "..."
+                                      : customer.name,
                                   style: TextStyle(fontSize: 16),
                                 ),
                                 Text(
-                                  customer.address,
+                                  customer.address.length > 15
+                                      ? customer.address.substring(0, 15) + "..."
+                                      : customer.address,
                                   style: TextStyle(fontSize: 16),
                                 ),
                               ],
@@ -704,6 +708,8 @@ class _DelieveriesState extends State<Delieveries>
       );
 
       if (response.statusCode == 200) {
+        Navigator.pop(context);
+
         _tabController.index == 0
             ? GetUpcomingDelivery(selectedDayIndex)
             : GetUpcomingDelivery(8);
@@ -729,9 +735,12 @@ class _DelieveriesState extends State<Delieveries>
       var params = {"deliveryId": deliveryId};
 
       Response response = await apiHelper.fetchData(
-          method: 'POST', endpoint: 'Customer/RejectDelivery', params: params);
+          method: 'PUT', endpoint: 'Customer/RejectDelivery', params: params);
+      print("rejecting3");
 
       if (response.statusCode == 200) {
+        Navigator.pop(context);
+
         _tabController.index == 0
             ? GetUpcomingDelivery(selectedDayIndex)
             : GetUpcomingDelivery(8);
@@ -743,6 +752,7 @@ class _DelieveriesState extends State<Delieveries>
     } catch (e) {
       print("Error fetching data: $e");
     } finally {
+
       setState(() {
         _loading = false;
       });

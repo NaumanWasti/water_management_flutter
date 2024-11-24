@@ -98,10 +98,13 @@ class _ProfileState extends State<Profile> {
 
   void SaveBusinessInfo(BusinessInfo businessInfo) async {
     try {
+      setState(() {
+        loader = true;
+      });
       var body = {
         "Edit":true,
         "TotalBottle":businessInfo.totalBottle,
-        "BottleRate":businessInfo.bottleRate,
+        "BottleRate":0,
         "TotalEarning":businessInfo.totalEarning,
         "BusinessName":businessInfo.businessName
       };
@@ -111,6 +114,7 @@ class _ProfileState extends State<Profile> {
           body: body
       );
       if (response.statusCode == 200) {
+        GetBusinessInfo();
         showToast(" ${response.data['message']}");
       } else {
         showToast("Error: ${response.data['detail']}");
@@ -118,6 +122,7 @@ class _ProfileState extends State<Profile> {
     } catch (e) {
     } finally {
       setState(() {
+        loader = false;
       });
     }
   }
@@ -163,14 +168,14 @@ class _ProfileState extends State<Profile> {
                         border: OutlineInputBorder(),
                       ),
                     ),
-                    SizedBox(height: 12),
-                    TextFormField(
-                      controller: bottleRate,
-                      decoration: InputDecoration(
-                        labelText: 'Bottle Rate',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
+                    // SizedBox(height: 12),
+                    // TextFormField(
+                    //   controller: bottleRate,
+                    //   decoration: InputDecoration(
+                    //     labelText: 'Bottle Rate',
+                    //     border: OutlineInputBorder(),
+                    //   ),
+                    // ),
                     SizedBox(height: widgetSpacing),
                     ElevatedButton(
                       onPressed: () {
@@ -179,7 +184,8 @@ class _ProfileState extends State<Profile> {
                           edit: true,
                           businessName: businessInfo.businessName,
                           totalBottle: int.parse(numberOfBottles.text),
-                          bottleRate: int.parse(bottleRate.text),
+                          // bottleRate: int.parse(bottleRate.text),
+                          bottleRate: 0,
                         );
                         SaveBusinessInfo(business);
                       },

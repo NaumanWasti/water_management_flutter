@@ -61,7 +61,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Flutter Demo',
+      title: 'Aqua Tracker',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),

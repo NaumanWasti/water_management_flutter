@@ -191,6 +191,7 @@ class _MyMainPageState extends State<Customers> {
                                               customerId:
                                             customer.id,
                                               customerName: customer.name,
+                                              phoneNumber: customer.phoneNumber,
                                             ),
                                           ),
                                         ),
@@ -248,28 +249,35 @@ class _MyMainPageState extends State<Customers> {
           ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            builder: (BuildContext context) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ListTile(
-                    leading: Icon(Icons.person_add),
-                    title: Text('Register Customer'),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => RegisterCustomer(forEdit: false,),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              );
-            },
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RegisterCustomer(forEdit: false,),
+            ),
           );
+          // showModalBottomSheet(
+          //   context: context,
+          //   builder: (BuildContext context) {
+          //     return Column(
+          //       mainAxisSize: MainAxisSize.min,
+          //       children: [
+          //         ListTile(
+          //           leading: Icon(Icons.person_add),
+          //           title: Text('Register Customer'),
+          //           onTap: () {
+          //             Navigator.push(
+          //               context,
+          //               MaterialPageRoute(
+          //                 builder: (context) => RegisterCustomer(forEdit: false,),
+          //               ),
+          //             );
+          //           },
+          //         ),
+          //       ],
+          //     );
+          //   },
+          // );
         },
         child: const Icon(Icons.add),
       ),

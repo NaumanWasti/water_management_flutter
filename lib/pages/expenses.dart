@@ -158,36 +158,42 @@ class _ExpensePageState extends State<ExpensePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          showModalBottomSheet(
+          showDialog(
             context: context,
             builder: (BuildContext context) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ListTile(
-                    leading: Icon(Icons.person_add),
-                    title: Text('Add Expense'),
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return addExpenseDialog(false);
-                        },
-                      );
-                    },
-                  ),
-                  // ListTile(
-                  //   leading: Icon(Icons.add_a_photo),
-                  //   title: Text('Some Other Action'),
-                  //   onTap: () {
-                  //     Navigator.pop(context);
-                  //     // Add some other action functionality here
-                  //   },
-                  // ),
-                ],
-              );
+              return addExpenseDialog(false);
             },
           );
+          // showModalBottomSheet(
+          //   context: context,
+          //   builder: (BuildContext context) {
+          //     return Column(
+          //       mainAxisSize: MainAxisSize.min,
+          //       children: [
+          //         ListTile(
+          //           leading: Icon(Icons.person_add),
+          //           title: Text('Add Expense'),
+          //           onTap: () {
+          //             showDialog(
+          //               context: context,
+          //               builder: (BuildContext context) {
+          //                 return addExpenseDialog(false);
+          //               },
+          //             );
+          //           },
+          //         ),
+          //         // ListTile(
+          //         //   leading: Icon(Icons.add_a_photo),
+          //         //   title: Text('Some Other Action'),
+          //         //   onTap: () {
+          //         //     Navigator.pop(context);
+          //         //     // Add some other action functionality here
+          //         //   },
+          //         // ),
+          //       ],
+          //     );
+          //   },
+          // );
         },
         child: const Icon(Icons.add),
       ),
@@ -247,7 +253,7 @@ class _ExpensePageState extends State<ExpensePage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               //Text("Description: ${expense.ExpenseDescription}"),
-              Text("Amount: ${expense.ExpenseAmount}"),
+              Text( "Amount: ${expense.ExpenseAmount}"),
               Text("Date: ${formatDateTime(date.toString())}"),
             ],
           ),
@@ -291,6 +297,7 @@ class _ExpensePageState extends State<ExpensePage> {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               TextFormField(
+                maxLength: 50,
                 controller: titleController,
                 keyboardType: TextInputType.text,
                 decoration: InputDecoration(labelText: 'Enter Title'),
@@ -313,6 +320,7 @@ class _ExpensePageState extends State<ExpensePage> {
               //   },
               // ),
               TextFormField(
+                maxLength: 5,
                 controller: amountController,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(labelText: 'Enter Amount'),
@@ -341,7 +349,6 @@ class _ExpensePageState extends State<ExpensePage> {
             TextButton(
               onPressed: () {
                 Navigator.pop(context); // Cancel button
-                Navigator.pop(context); // Cancel button
               },
               child: Text('Cancel'),
             ),
@@ -356,7 +363,6 @@ class _ExpensePageState extends State<ExpensePage> {
                   );
                   addExpense(expense);
                 }
-                Navigator.pop(context);
               },
               child: Text(update ? 'Update' : 'Add'),
             ),

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:water_managment_system/db_model/customer.dart';
 import 'package:water_managment_system/pages/main_page.dart';
@@ -51,13 +52,7 @@ bool _loading=false;
   }
   @override
   void dispose() {
-    userNameController.dispose();
-    userAddressController.dispose();
-    userNumberController.dispose();
-    bottlesTakenController.dispose();
-    totalAdvanceController.dispose();
-    emailAddressController.dispose();
-    bottlePriceController.dispose();
+
     super.dispose();
   } 
 
@@ -75,11 +70,6 @@ bool _loading=false;
     return WillPopScope(
       onWillPop: () async {
         Navigator.pop(context);
-        Navigator.pop(context);
-        // Navigator.pushReplacement(
-        //   context,
-        //   MaterialPageRoute(builder: (context) => MainPage(initialTabIndex: 0,)), // Replace CalendarWidget with your actual calendar widget
-        // );
         return true;
       },
       child: Scaffold(
@@ -96,8 +86,9 @@ bool _loading=false;
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     TextFormField(
+                      maxLength: 50,
                       controller: userNameController,
-                      decoration: InputDecoration(labelText: 'User Name'),
+                      decoration: InputDecoration(labelText: 'Name'),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'User name is required';
@@ -106,8 +97,9 @@ bool _loading=false;
                       },
                     ),
                     TextFormField(
+                      maxLength: 50,
                       controller: userAddressController,
-                      decoration: InputDecoration(labelText: 'User Address'),
+                      decoration: InputDecoration(labelText: 'Address'),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'User address is required';
@@ -116,8 +108,9 @@ bool _loading=false;
                       },
                     ),
                     TextFormField(
+                      maxLength: 11,
                       controller: userNumberController,
-                      decoration: InputDecoration(labelText: 'User Number'),
+                      decoration: InputDecoration(labelText: 'Number'),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'User number is required';
@@ -138,6 +131,7 @@ bool _loading=false;
                     //   keyboardType: TextInputType.number,
                     // ),
                     TextFormField(
+                      maxLength: 5,
                       controller: totalAdvanceController,
                       decoration: InputDecoration(labelText: 'Total Advance'),
                       validator: (value) {
@@ -156,6 +150,7 @@ bool _loading=false;
                       },
                     ),
                     TextFormField(
+                      maxLength: 5,
                       controller: bottlePriceController,
                       decoration: InputDecoration(labelText: 'Bottle Price'),
                       validator: (value) {
@@ -174,11 +169,11 @@ bool _loading=false;
                       },
                     ),
 
-                    TextFormField(
-                      controller: emailAddressController,
-                      decoration: InputDecoration(labelText: 'Email Address (Optional)'),
-                      keyboardType: TextInputType.emailAddress,
-                    ),
+                    // TextFormField(
+                    //   controller: emailAddressController,
+                    //   decoration: InputDecoration(labelText: 'Email Address (Optional)'),
+                    //   keyboardType: TextInputType.emailAddress,
+                    // ),
                     SizedBox(height: 20),
                     buildWeekDays(width),
                     SizedBox(height: 20),
@@ -294,6 +289,10 @@ bool _loading=false;
   }
   void CreateCustomerAsync(Customer customer) async {
     try {
+      if(!weekDays.any((element) => element==true)){
+        showToast("Please select at least 1 day");
+        return;
+      }
       setState(() {
         _loading = true;
       });

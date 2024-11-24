@@ -16,10 +16,13 @@ class ApiHelper {
       Map<String, String> headers = {
         'authorization': basicAuth,
       };
+      print("id $id");
+      print("params $params");
       if (id != null) {
         params ??= {};
         params['userId'] = id;
       }
+      print("params $params");
 
       Options options = Options(
         headers: headers,
@@ -37,6 +40,12 @@ class ApiHelper {
           '${Globals.base_url}/$endpoint',
           queryParameters: params,
           data: body,
+          options: options,
+        );
+      } else if (method == 'PUT') {
+        response = await dio.put(
+          '${Globals.base_url}/$endpoint',
+          queryParameters: params,
           options: options,
         );
       } else {

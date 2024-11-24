@@ -131,7 +131,7 @@ class _AnalyticsState extends State<Analytics> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        Navigator.push(
+        Navigator.pop(
           context,
           MaterialPageRoute(builder: (context) => MainPage(initialTabIndex: 3,)), // Replace CalendarWidget with your actual calendar widget
         );

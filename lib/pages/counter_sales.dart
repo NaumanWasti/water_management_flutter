@@ -197,6 +197,7 @@ class _CounterSalesState extends State<CounterSales> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   TextField(
+                    enabled: selectedMonth.month == DateTime.now().month,
                     controller: bottleRateController,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
@@ -222,7 +223,7 @@ class _CounterSalesState extends State<CounterSales> {
                     children: <Widget>[
                       IconButton(
                         icon: Icon(Icons.add),
-                        onPressed: () {
+                        onPressed:  selectedMonth.month !=  DateTime.now().month ? null :  () {
                           if (validateNumeric(bottleRateController.text)) {
                             AddCounterSales(false,amount:  int.parse(bottleRateController.text));
                           } else {
@@ -232,7 +233,7 @@ class _CounterSalesState extends State<CounterSales> {
                       ),
                       IconButton(
                         icon: Icon(Icons.remove),
-                        onPressed: () {
+                        onPressed: selectedMonth.month !=  DateTime.now().month ? null : () {
                           if(counterSaleCount!=0)
                           AddCounterSales(true);
                           else showToast("no sale found");
